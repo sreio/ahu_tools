@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: Windows AMD64
+            platform: windows/amd64
+            os: windows-latest
+            artifact-name: AhuTools-windows-amd64
+          - name: macOS AMD64
+            platform: darwin/amd64
+            os: macos-latest
+            artifact-name: AhuTools-darwin-amd64
+          - name: macOS ARM64
+            platform: darwin/arm64
+            os: macos-latest
+            artifact-name: AhuTools-darwin-arm64
+          - name: Linux AMD64
+            platform: linux/amd64
+            os: ubuntu-latest
+            artifact-name: AhuTools-linux-amd64
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.name }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Wails App
+        run: wails build -platform ${{ matrix.platform }} -o ahutools
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd build/bin
+          zip -r ../../${{ matrix.artifact-name }}.zip ./*
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path build/bin/* -DestinationPath ${{ matrix.artifact-name }}.zip
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-name }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Create Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -laR artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
