@@ -25,10 +25,6 @@ jobs:
             platform: darwin/arm64
             os: macos-latest
             artifact-name: AhuTools-darwin-arm64
-          - name: Linux AMD64
-            platform: linux/amd64
-            os: ubuntu-latest
-            artifact-name: AhuTools-linux-amd64
 
     runs-on: ${{ matrix.os }}
     name: Build (${{ matrix.name }})
