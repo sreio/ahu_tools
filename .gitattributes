@@ -1,0 +1,5 @@
+# Keep GitHub language statistics focused on the application source.
+.trellis/** linguist-vendored
+docs/superpowers/** linguist-documentation
+frontend/wailsjs/** linguist-generated
+build/** linguist-generated
