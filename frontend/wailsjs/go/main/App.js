@@ -34,6 +34,10 @@ export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
 
+export function InstallDownloadedUpdate(arg1) {
+  return window['go']['main']['App']['InstallDownloadedUpdate'](arg1);
+}
+
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }

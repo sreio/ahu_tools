@@ -18,4 +18,6 @@ export function GetAuthor():Promise<string>;
 
 export function GetVersion():Promise<string>;
 
+export function InstallDownloadedUpdate(arg1:string):Promise<main.InstallUpdateResponse>;
+
 export function SaveConfig(arg1:main.Config):Promise<void>;

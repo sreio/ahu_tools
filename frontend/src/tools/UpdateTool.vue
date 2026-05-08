@@ -35,8 +35,8 @@
         <template #header>当前平台产物</template>
         <p><strong>文件：</strong>{{ info.asset.name }}</p>
         <p><strong>大小：</strong>{{ formatSize(info.asset.size) }}</p>
-        <el-button type="primary" :loading="downloading" @click="downloadUpdate">
-          下载到本地
+        <el-button type="primary" :loading="downloading || installing" @click="downloadUpdate">
+          下载并安装
         </el-button>
       </el-card>
     </el-card>
@@ -44,7 +44,8 @@
 </template>
 
 <script>
-import { CheckForUpdate, DownloadUpdate } from '../services/wailsApi'
+import { ElMessageBox } from 'element-plus'
+import { CheckForUpdate, DownloadUpdate, InstallDownloadedUpdate } from '../services/wailsApi'
 
 export default {
   name: 'UpdateTool',
@@ -53,6 +54,7 @@ export default {
     return {
       checking: false,
       downloading: false,
+      installing: false,
       info: null,
       error: '',
       message: '点击“检查更新”获取最新 GitHub Release 信息。',
@@ -82,6 +84,20 @@ export default {
     async downloadUpdate() {
       if (!this.info?.asset) return
 
+      try {
+        await ElMessageBox.confirm(
+          '下载完成后将自动启动安装流程，并退出当前应用。是否继续？',
+          '安装更新',
+          {
+            confirmButtonText: '继续',
+            cancelButtonText: '取消',
+            type: 'warning',
+          },
+        )
+      } catch {
+        return
+      }
+
       this.downloading = true
       this.error = ''
       this.message = ''
@@ -89,8 +105,8 @@ export default {
       try {
         const response = await DownloadUpdate(this.info.asset)
         if (response.success) {
-          this.message = response.message || '下载完成'
-          this.$emit('toast', { message: this.message, type: 'success' })
+          this.downloading = false
+          await this.installUpdate(response.path)
         } else if (response.cancelled) {
           this.message = response.message || '已取消保存'
         } else {
@@ -100,6 +116,25 @@ export default {
         this.error = '调用下载服务失败，请稍后重试'
       } finally {
         this.downloading = false
+      }
+    },
+    async installUpdate(path) {
+      this.installing = true
+      this.error = ''
+      this.message = ''
+
+      try {
+        const response = await InstallDownloadedUpdate(path)
+        if (response.success) {
+          this.message = response.message || '安装程序已启动，应用即将退出'
+          this.$emit('toast', { message: this.message, type: 'success' })
+        } else {
+          this.error = response.error || '启动安装失败，请手动打开安装包'
+        }
+      } catch {
+        this.error = '调用安装服务失败，请手动打开安装包'
+      } finally {
+        this.installing = false
       }
     },
     formatSize(size) {

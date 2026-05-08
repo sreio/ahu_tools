@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -45,6 +47,12 @@ type DownloadUpdateResponse struct {
 	Path      string `json:"path,omitempty"`
 	Message   string `json:"message,omitempty"`
 	Error     string `json:"error,omitempty"`
+}
+
+type InstallUpdateResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 type githubRelease struct {
@@ -95,6 +103,38 @@ func (a *App) DownloadUpdate(asset DownloadAsset) DownloadUpdateResponse {
 	return DownloadUpdateResponse{Success: true, Path: path, Message: "下载完成"}
 }
 
+func (a *App) InstallDownloadedUpdate(path string) InstallUpdateResponse {
+	if a.ctx == nil {
+		return InstallUpdateResponse{Success: false, Error: "应用尚未初始化完成，请稍后重试"}
+	}
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return InstallUpdateResponse{Success: false, Error: "安装包路径无效，请重新下载"}
+	}
+	if err := validateUpdatePackagePath(runtime.GOOS, path); err != nil {
+		return InstallUpdateResponse{Success: false, Error: err.Error()}
+	}
+
+	executablePath, err := os.Executable()
+	if err != nil {
+		return InstallUpdateResponse{Success: false, Error: "无法定位当前应用，请手动安装更新"}
+	}
+	command, err := buildInstallUpdateCommand(runtime.GOOS, path, executablePath)
+	if err != nil {
+		return InstallUpdateResponse{Success: false, Error: err.Error()}
+	}
+	if err := command.Start(); err != nil {
+		return InstallUpdateResponse{Success: false, Error: "启动安装包失败，请手动打开安装"}
+	}
+
+	go func() {
+		time.Sleep(800 * time.Millisecond)
+		wailsRuntime.Quit(a.ctx)
+	}()
+
+	return InstallUpdateResponse{Success: true, Message: installUpdateMessage(runtime.GOOS)}
+}
+
 func checkForUpdateFromEndpoint(endpoint string, currentVersion string, goos string, goarch string) UpdateInfo {
 	info := UpdateInfo{
 		Success:        false,
@@ -109,7 +149,7 @@ func checkForUpdateFromEndpoint(endpoint string, currentVersion string, goos str
 		return info
 	}
 	request.Header.Set("Accept", "application/vnd.github+json")
-	request.Header.Set("User-Agent", AppName)
+	request.Header.Set("User-Agent", "AhuTools")
 
 	resp, err := client.Do(request)
 	if err != nil {
@@ -238,6 +278,51 @@ func findPlatformAsset(release githubRelease, goos string, goarch string) (githu
 	}
 
 	return githubReleaseAsset{}, false
+}
+
+func validateUpdatePackagePath(goos string, path string) error {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return errors.New("安装包不存在，请重新下载")
+	}
+
+	extension := strings.ToLower(filepath.Ext(path))
+	if goos == "windows" && extension != ".exe" {
+		return errors.New("Windows 更新包必须是 .exe 安装程序")
+	}
+	if goos == "darwin" && extension != ".dmg" {
+		return errors.New("macOS 更新包必须是 .dmg 文件")
+	}
+	if goos != "windows" && goos != "darwin" {
+		return errors.New("当前平台暂不支持自动安装更新")
+	}
+
+	return nil
+}
+
+func buildInstallUpdateCommand(goos string, packagePath string, executablePath string) (*exec.Cmd, error) {
+	if goos == "windows" {
+		return exec.Command("cmd", "/C", fmt.Sprintf("start \"\" /WAIT %s /S && start \"\" %s", quoteWindowsCommandArg(packagePath), quoteWindowsCommandArg(executablePath))), nil
+	}
+	if goos == "darwin" {
+		return exec.Command("open", packagePath), nil
+	}
+
+	return nil, errors.New("当前平台暂不支持自动安装更新")
+}
+
+func quoteWindowsCommandArg(value string) string {
+	return `"` + strings.ReplaceAll(value, `"`, `\"`) + `"`
+}
+
+func installUpdateMessage(goos string) string {
+	if goos == "windows" {
+		return "安装程序已启动，应用即将退出并在安装完成后重启"
+	}
+	if goos == "darwin" {
+		return "DMG 已打开，应用即将退出，请在 Finder 中完成安装"
+	}
+	return "安装程序已启动，应用即将退出"
 }
 
 func downloadFile(url string, path string) error {

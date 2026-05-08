@@ -90,6 +90,22 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class InstallUpdateResponse {
+	    success: boolean;
+	    message?: string;
+	    error?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new InstallUpdateResponse(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.error = source["error"];
+	    }
+	}
 	export class UpdateInfo {
 	    success: boolean;
 	    hasUpdate: boolean;

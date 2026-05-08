@@ -6,5 +6,6 @@ export {
   GetAppName,
   GetAuthor,
   GetVersion,
+  InstallDownloadedUpdate,
   SaveConfig,
 } from '../../wailsjs/go/main/App'

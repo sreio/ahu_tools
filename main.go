@@ -12,8 +12,8 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-const Version = "1.1.1"
-const AppName = "itTools"
+const Version = "1.1.2"
+const AppName = "IT工具箱"
 const Author = "zhichi"
 
 func main() {

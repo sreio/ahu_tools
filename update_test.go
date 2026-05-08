@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -81,6 +84,9 @@ func TestFindPlatformAssetNoMatch(t *testing.T) {
 func TestCheckForUpdateFromEndpointNewVersion(t *testing.T) {
 	published := time.Date(2026, 5, 8, 10, 0, 0, 0, time.UTC)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("User-Agent") != "AhuTools" {
+			t.Fatalf("unexpected user agent: %s", r.Header.Get("User-Agent"))
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"tag_name":"v1.2.0",
@@ -198,5 +204,58 @@ func TestCheckForUpdateFromEndpointInvalidJSON(t *testing.T) {
 	}
 	if info.Error != "Release 信息解析失败，请稍后重试" {
 		t.Fatalf("unexpected error: %s", info.Error)
+	}
+}
+
+func TestValidateUpdatePackagePath(t *testing.T) {
+	dir := t.TempDir()
+	windowsInstaller := filepath.Join(dir, "update.exe")
+	macPackage := filepath.Join(dir, "update.dmg")
+	textFile := filepath.Join(dir, "update.txt")
+	for _, path := range []string{windowsInstaller, macPackage, textFile} {
+		if err := os.WriteFile(path, []byte("test"), 0o600); err != nil {
+			t.Fatalf("write test file: %v", err)
+		}
+	}
+
+	if err := validateUpdatePackagePath("windows", windowsInstaller); err != nil {
+		t.Fatalf("expected windows installer to be valid: %v", err)
+	}
+	if err := validateUpdatePackagePath("darwin", macPackage); err != nil {
+		t.Fatalf("expected mac package to be valid: %v", err)
+	}
+	if err := validateUpdatePackagePath("windows", textFile); err == nil {
+		t.Fatal("expected windows text file to be rejected")
+	}
+	if err := validateUpdatePackagePath("darwin", windowsInstaller); err == nil {
+		t.Fatal("expected mac exe file to be rejected")
+	}
+	if err := validateUpdatePackagePath("linux", textFile); err == nil {
+		t.Fatal("expected linux install to be unsupported")
+	}
+}
+
+func TestBuildInstallUpdateCommand(t *testing.T) {
+	windowsCommand, err := buildInstallUpdateCommand("windows", `C:\Temp\IT工具箱 Setup.exe`, `C:\Program Files\AhuTools\AhuTools.exe`)
+	if err != nil {
+		t.Fatalf("expected windows command: %v", err)
+	}
+	if windowsCommand.Path != "cmd" {
+		t.Fatalf("unexpected windows command path: %s", windowsCommand.Path)
+	}
+	if len(windowsCommand.Args) != 3 || !strings.Contains(windowsCommand.Args[2], "/S") || !strings.Contains(windowsCommand.Args[2], "/WAIT") {
+		t.Fatalf("unexpected windows command args: %#v", windowsCommand.Args)
+	}
+
+	macCommand, err := buildInstallUpdateCommand("darwin", "/tmp/IT工具箱.dmg", "/Applications/AhuTools.app/Contents/MacOS/AhuTools")
+	if err != nil {
+		t.Fatalf("expected mac command: %v", err)
+	}
+	if filepath.Base(macCommand.Path) != "open" || len(macCommand.Args) != 2 || macCommand.Args[1] != "/tmp/IT工具箱.dmg" {
+		t.Fatalf("unexpected mac command path %q args: %#v", macCommand.Path, macCommand.Args)
+	}
+
+	if _, err := buildInstallUpdateCommand("linux", "/tmp/app", "/tmp/app"); err == nil {
+		t.Fatal("expected linux install command to be unsupported")
 	}
 }

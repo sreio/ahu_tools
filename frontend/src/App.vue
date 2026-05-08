@@ -51,8 +51,8 @@ export default {
     return {
       tools,
       activeTool: 'decrypt',
-      appName: 'itTools',
-      version: '1.1.1',
+      appName: 'IT工具箱',
+      version: '1.1.2',
       author: 'sreio',
       configs: [],
       showSettings: false,
