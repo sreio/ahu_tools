@@ -51,8 +51,8 @@ export default {
     return {
       tools,
       activeTool: 'decrypt',
-      appName: 'AhuTools',
-      version: '1.0.0',
+      appName: 'itTools',
+      version: '1.1.1',
       author: 'sreio',
       configs: [],
       showSettings: false,
