@@ -80,6 +80,8 @@ jobs:
             echo "macOS app bundle not found"
             exit 1
           fi
+          codesign --force --deep --sign - "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           create-dmg \
             --volname "AhuTools" \
             --window-pos 200 120 \
