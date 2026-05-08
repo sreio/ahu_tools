@@ -118,10 +118,12 @@ body {
   white-space: nowrap;
 }
 
-.brand p,
-.brand small {
+.brand-meta {
   margin: 0;
+  overflow: hidden;
   color: #6b7280;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .collapse-button.el-button {

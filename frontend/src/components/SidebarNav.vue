@@ -11,8 +11,7 @@
       </div>
       <div v-if="!collapsed" class="brand-copy">
         <h1>{{ appName }}</h1>
-        <p>v{{ version }}</p>
-        <small v-if="author">{{ author }}</small>
+        <p class="brand-meta">v{{ version }}<span v-if="author"> · {{ author }}</span></p>
       </div>
       <el-button class="collapse-button" circle size="small" @click="$emit('toggle-collapse')">
         {{ collapsed ? '›' : '‹' }}

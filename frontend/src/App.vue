@@ -52,7 +52,7 @@ export default {
       tools,
       activeTool: 'decrypt',
       appName: 'IT工具箱',
-      version: '1.1.2',
+      version: '1.1.3',
       author: 'sreio',
       configs: [],
       showSettings: false,
