@@ -1,0 +1,8 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".claude/commands/trellis/check.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Wails/Go backend structure"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Wails boundary errors"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "verification and forbidden patterns"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "secret-safe logging"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "backend/frontend update flow"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "reuse existing contracts"}
