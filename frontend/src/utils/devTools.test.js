@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addJsonSlashes,
   dateToTimestamp,
   decodeBase64,
+  decodeChineseUnicode,
   decodeJwt,
   decodeUrl,
   encodeBase64,
+  encodeChineseUnicode,
   encodeUrl,
   formatJson,
   hashText,
   minifyJson,
+  removeJsonSlashes,
   timestampToDate,
 } from './devTools'
 
@@ -32,6 +36,29 @@ describe('devTools utilities', () => {
       ok: false,
       error: 'JSON 格式错误，请检查输入内容',
     })
+  })
+
+  it('encodes Chinese characters as Unicode escapes', () => {
+    expect(encodeChineseUnicode('中文 AhuTools')).toEqual({
+      ok: true,
+      value: '\\u4e2d\\u6587 AhuTools',
+    })
+  })
+
+  it('decodes Unicode escapes to Chinese characters', () => {
+    expect(decodeChineseUnicode('\\u4e2d\\u6587 AhuTools')).toEqual({
+      ok: true,
+      value: '中文 AhuTools',
+    })
+  })
+
+  it('adds and removes JSON slashes', () => {
+    const escaped = addJsonSlashes('{"name":"中文"}')
+    expect(escaped).toEqual({
+      ok: true,
+      value: '{\\"name\\":\\"中文\\"}',
+    })
+    expect(removeJsonSlashes(escaped.value)).toEqual({ ok: true, value: '{"name":"中文"}' })
   })
 
   it('encodes and decodes UTF-8 Base64 text', () => {

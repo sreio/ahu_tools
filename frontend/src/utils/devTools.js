@@ -43,6 +43,22 @@ export function minifyJson(input) {
   return success(JSON.stringify(parsed.value))
 }
 
+export function encodeChineseUnicode(input) {
+  return success(String(input).replace(/[一-鿿]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`))
+}
+
+export function decodeChineseUnicode(input) {
+  return success(String(input).replace(/\\u([0-9a-fA-F]{4})/g, (_, code) => String.fromCharCode(parseInt(code, 16))))
+}
+
+export function addJsonSlashes(input) {
+  return success(String(input).replace(/\\/g, '\\\\').replace(/"/g, '\\"'))
+}
+
+export function removeJsonSlashes(input) {
+  return success(String(input).replace(/\\"/g, '"').replace(/\\\\/g, '\\'))
+}
+
 export function encodeBase64(input) {
   const bytes = textEncoder.encode(input)
   let binary = ''
