@@ -146,6 +146,47 @@ body {
   padding: 18px 0;
 }
 
+.sidebar-footer {
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.update-entry.el-button {
+  justify-content: flex-start;
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  color: #4b5563;
+  border-radius: 10px;
+}
+
+.update-entry.el-button:hover {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.sidebar.is-collapsed .update-entry.el-button {
+  justify-content: center;
+  padding: 0;
+}
+
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.update-icon {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.update-label {
+  margin-left: 10px;
+  font-weight: 700;
+}
+
 .nav-group {
   margin-bottom: 22px;
 }
@@ -296,6 +337,36 @@ body {
 
 .tool-feedback {
   margin: 16px 0;
+}
+
+.update-action-bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+}
+
+.update-action-bar div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.update-action-bar strong,
+.update-action-bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-action-bar span {
+  color: #6b7280;
 }
 
 .two-column-results {

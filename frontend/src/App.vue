@@ -8,8 +8,10 @@
         :tools="tools"
         :active-tool="activeTool"
         :collapsed="sidebarCollapsed"
+        :update-available="updateAvailable"
         @select-tool="activeTool = $event"
         @toggle-collapse="toggleSidebar"
+        @open-updates="showUpdates = true"
       />
     </el-aside>
 
@@ -31,6 +33,14 @@
       :configs="configs"
       @save="saveConfig"
     />
+
+    <el-dialog v-model="showUpdates" title="应用更新" width="760px" destroy-on-close>
+      <UpdateTool
+        :initial-info="updateInfo"
+        @toast="showToast"
+        @checked="handleUpdateChecked"
+      />
+    </el-dialog>
   </el-container>
 </template>
 
@@ -38,24 +48,29 @@
 import { ElMessage } from 'element-plus'
 import ConfigModal from './components/ConfigModal.vue'
 import SidebarNav from './components/SidebarNav.vue'
-import { GetAllConfigs, GetAppName, GetAuthor, GetVersion, SaveConfig } from './services/wailsApi'
+import { CheckForUpdate, GetAllConfigs, GetAppName, GetAuthor, GetVersion, SaveConfig } from './services/wailsApi'
 import { tools } from './tools'
+import UpdateTool from './tools/UpdateTool.vue'
 
 export default {
   name: 'App',
   components: {
     ConfigModal,
     SidebarNav,
+    UpdateTool,
   },
   data() {
     return {
       tools,
       activeTool: 'decrypt',
       appName: 'IT工具箱',
-      version: '1.1.3',
+      version: '1.1.4',
       author: 'sreio',
       configs: [],
       showSettings: false,
+      showUpdates: false,
+      updateInfo: null,
+      updateAvailable: false,
       sidebarWidth: 280,
       sidebarCollapsed: false,
       resizingSidebar: false,
@@ -72,6 +87,7 @@ export default {
   async mounted() {
     await this.loadAppInfo()
     await this.loadConfigs()
+    await this.checkUpdateSilently()
   },
   beforeUnmount() {
     this.stopSidebarResize()
@@ -110,6 +126,19 @@ export default {
       } catch {
         this.showToast({ message: '保存配置失败', type: 'error' })
       }
+    },
+    async checkUpdateSilently() {
+      try {
+        const info = await CheckForUpdate()
+        this.handleUpdateChecked(info)
+      } catch {
+        this.updateInfo = null
+        this.updateAvailable = false
+      }
+    },
+    handleUpdateChecked(info) {
+      this.updateInfo = info
+      this.updateAvailable = Boolean(info?.success && info.hasUpdate && info.platformHasAsset)
     },
     showToast(payload) {
       const toast = typeof payload === 'string' ? { message: payload, type: 'success' } : payload

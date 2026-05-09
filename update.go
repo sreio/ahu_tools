@@ -119,7 +119,7 @@ func (a *App) InstallDownloadedUpdate(path string) InstallUpdateResponse {
 	if err != nil {
 		return InstallUpdateResponse{Success: false, Error: "无法定位当前应用，请手动安装更新"}
 	}
-	command, err := buildInstallUpdateCommand(runtime.GOOS, path, executablePath)
+	command, err := buildInstallUpdateCommand(runtime.GOOS, path, executablePath, os.Getpid())
 	if err != nil {
 		return InstallUpdateResponse{Success: false, Error: err.Error()}
 	}
@@ -300,9 +300,16 @@ func validateUpdatePackagePath(goos string, path string) error {
 	return nil
 }
 
-func buildInstallUpdateCommand(goos string, packagePath string, executablePath string) (*exec.Cmd, error) {
+func buildInstallUpdateCommand(goos string, packagePath string, executablePath string, currentPID int) (*exec.Cmd, error) {
 	if goos == "windows" {
-		return exec.Command("cmd", "/C", fmt.Sprintf("start \"\" /WAIT %s /S && start \"\" %s", quoteWindowsCommandArg(packagePath), quoteWindowsCommandArg(executablePath))), nil
+		script := fmt.Sprintf(
+			"Wait-Process -Id %d -ErrorAction SilentlyContinue; Start-Process -FilePath %s -ArgumentList '/S' -Wait; Start-Sleep -Seconds 2; for ($i = 0; $i -lt 90; $i++) { if (Test-Path %s) { Start-Process -FilePath %s; exit 0 }; Start-Sleep -Seconds 1 }; exit 1",
+			currentPID,
+			quotePowerShellString(packagePath),
+			quotePowerShellString(executablePath),
+			quotePowerShellString(executablePath),
+		)
+		return exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script), nil
 	}
 	if goos == "darwin" {
 		return exec.Command("open", packagePath), nil
@@ -311,8 +318,8 @@ func buildInstallUpdateCommand(goos string, packagePath string, executablePath s
 	return nil, errors.New("当前平台暂不支持自动安装更新")
 }
 
-func quoteWindowsCommandArg(value string) string {
-	return `"` + strings.ReplaceAll(value, `"`, `\"`) + `"`
+func quotePowerShellString(value string) string {
+	return `'` + strings.ReplaceAll(value, `'`, `''`) + `'`
 }
 
 func installUpdateMessage(goos string) string {

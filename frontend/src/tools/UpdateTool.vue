@@ -16,6 +16,16 @@
     <el-alert v-if="message" :title="message" type="info" show-icon :closable="false" class="tool-feedback" />
 
     <el-card v-if="info" class="result-container update-info" shadow="never">
+      <div v-if="info.asset" class="update-action-bar">
+        <div>
+          <strong>{{ info.asset.name }}</strong>
+          <span>{{ formatSize(info.asset.size) }}</span>
+        </div>
+        <el-button type="primary" :loading="downloading || installing" @click="downloadUpdate">
+          下载并安装
+        </el-button>
+      </div>
+
       <el-descriptions :column="1" border>
         <el-descriptions-item label="当前版本">{{ info.currentVersion }}</el-descriptions-item>
         <el-descriptions-item v-if="info.latestVersion" label="最新版本">{{ info.latestVersion }}</el-descriptions-item>
@@ -30,15 +40,6 @@
         <template #header>Release Notes</template>
         <pre class="result-json">{{ info.releaseNotes }}</pre>
       </el-card>
-
-      <el-card v-if="info.asset" class="nested-result-card" shadow="never">
-        <template #header>当前平台产物</template>
-        <p><strong>文件：</strong>{{ info.asset.name }}</p>
-        <p><strong>大小：</strong>{{ formatSize(info.asset.size) }}</p>
-        <el-button type="primary" :loading="downloading || installing" @click="downloadUpdate">
-          下载并安装
-        </el-button>
-      </el-card>
     </el-card>
   </el-card>
 </template>
@@ -49,7 +50,13 @@ import { CheckForUpdate, DownloadUpdate, InstallDownloadedUpdate } from '../serv
 
 export default {
   name: 'UpdateTool',
-  emits: ['toast'],
+  props: {
+    initialInfo: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'checked'],
   data() {
     return {
       checking: false,
@@ -60,6 +67,16 @@ export default {
       message: '点击“检查更新”获取最新 GitHub Release 信息。',
     }
   },
+  watch: {
+    initialInfo: {
+      immediate: true,
+      handler(info) {
+        if (info) {
+          this.applyUpdateInfo(info)
+        }
+      },
+    },
+  },
   methods: {
     async checkUpdate() {
       this.checking = true
@@ -69,16 +86,23 @@ export default {
 
       try {
         const info = await CheckForUpdate()
-        this.info = info
-        if (info.success) {
-          this.message = info.message || ''
-        } else {
-          this.error = info.error || '检查更新失败，请稍后重试'
-        }
+        this.applyUpdateInfo(info)
+        this.$emit('checked', info)
       } catch {
         this.error = '调用更新服务失败，请稍后重试'
+        this.$emit('checked', null)
       } finally {
         this.checking = false
+      }
+    },
+    applyUpdateInfo(info) {
+      this.info = info
+      if (info.success) {
+        this.message = info.message || ''
+        this.error = ''
+      } else {
+        this.error = info.error || '检查更新失败，请稍后重试'
+        this.message = ''
       }
     },
     async downloadUpdate() {

@@ -19,7 +19,7 @@ jobs:
           - name: Windows AMD64
             platform: windows/amd64
             os: windows-latest
-            artifact-name: AhuTools-windows-amd64-installer.exe
+            artifact-name: AhuTools-windows-amd64.exe
           - name: macOS AMD64
             platform: darwin/amd64
             os: macos-latest

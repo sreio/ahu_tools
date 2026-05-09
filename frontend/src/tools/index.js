@@ -4,7 +4,6 @@ import HashTool from './HashTool.vue'
 import JsonTool from './JsonTool.vue'
 import JwtTool from './JwtTool.vue'
 import TimestampTool from './TimestampTool.vue'
-import UpdateTool from './UpdateTool.vue'
 import UrlTool from './UrlTool.vue'
 
 export const tools = [
@@ -56,12 +55,5 @@ export const tools = [
     group: '开发辅助',
     description: '仅 decode',
     component: JwtTool,
-  },
-  {
-    key: 'updates',
-    name: '应用更新',
-    group: '应用',
-    description: '检查 GitHub Release',
-    component: UpdateTool,
   },
 ]

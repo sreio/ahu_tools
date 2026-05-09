@@ -33,6 +33,17 @@
         </el-menu>
       </section>
     </el-scrollbar>
+
+    <div class="sidebar-footer">
+      <el-tooltip :disabled="!collapsed" content="检查更新" placement="right">
+        <el-button class="update-entry" text @click="$emit('open-updates')">
+          <el-badge :is-dot="updateAvailable" :hidden="!updateAvailable" class="update-badge">
+            <span class="update-icon">↻</span>
+          </el-badge>
+          <span v-if="!collapsed" class="update-label">检查更新</span>
+        </el-button>
+      </el-tooltip>
+    </div>
   </div>
 </template>
 
@@ -64,8 +75,12 @@ export default {
       type: Boolean,
       default: false,
     },
+    updateAvailable: {
+      type: Boolean,
+      default: false,
+    },
   },
-  emits: ['select-tool', 'toggle-collapse'],
+  emits: ['select-tool', 'toggle-collapse', 'open-updates'],
   computed: {
     groupedTools() {
       const groups = []

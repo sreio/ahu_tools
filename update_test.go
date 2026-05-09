@@ -59,7 +59,7 @@ func TestCompareVersionsRejectsInvalid(t *testing.T) {
 func TestFindPlatformAsset(t *testing.T) {
 	release := githubRelease{
 		Assets: []githubReleaseAsset{
-			{Name: "AhuTools-windows-amd64-installer.exe", BrowserDownloadURL: "https://example.com/win.exe", Size: 10},
+			{Name: "AhuTools-windows-amd64.exe", BrowserDownloadURL: "https://example.com/win.exe", Size: 10},
 			{Name: "AhuTools-darwin-arm64.dmg", BrowserDownloadURL: "https://example.com/mac.dmg", Size: 20},
 		},
 	}
@@ -74,7 +74,7 @@ func TestFindPlatformAsset(t *testing.T) {
 }
 
 func TestFindPlatformAssetNoMatch(t *testing.T) {
-	release := githubRelease{Assets: []githubReleaseAsset{{Name: "AhuTools-windows-amd64-installer.exe"}}}
+	release := githubRelease{Assets: []githubReleaseAsset{{Name: "AhuTools-windows-amd64.exe"}}}
 	_, ok := findPlatformAsset(release, "linux", "amd64")
 	if ok {
 		t.Fatal("expected no matching linux asset")
@@ -142,7 +142,7 @@ func TestCheckForUpdateFromEndpointNoMatchingAsset(t *testing.T) {
 			"tag_name":"v1.2.0",
 			"draft":false,
 			"prerelease":false,
-			"assets":[{"name":"AhuTools-windows-amd64-installer.exe","browser_download_url":"https://example.com/win.exe","size":1024}]
+			"assets":[{"name":"AhuTools-windows-amd64.exe","browser_download_url":"https://example.com/win.exe","size":1024}]
 		}`))
 	}))
 	defer server.Close()
@@ -236,18 +236,18 @@ func TestValidateUpdatePackagePath(t *testing.T) {
 }
 
 func TestBuildInstallUpdateCommand(t *testing.T) {
-	windowsCommand, err := buildInstallUpdateCommand("windows", `C:\Temp\IT工具箱 Setup.exe`, `C:\Program Files\AhuTools\AhuTools.exe`)
+	windowsCommand, err := buildInstallUpdateCommand("windows", `C:\Temp\IT工具箱 Setup.exe`, `C:\Program Files\AhuTools\AhuTools.exe`, 1234)
 	if err != nil {
 		t.Fatalf("expected windows command: %v", err)
 	}
-	if windowsCommand.Path != "cmd" {
+	if windowsCommand.Path != "powershell.exe" {
 		t.Fatalf("unexpected windows command path: %s", windowsCommand.Path)
 	}
-	if len(windowsCommand.Args) != 3 || !strings.Contains(windowsCommand.Args[2], "/S") || !strings.Contains(windowsCommand.Args[2], "/WAIT") {
+	if len(windowsCommand.Args) != 6 || !strings.Contains(windowsCommand.Args[5], "Wait-Process -Id 1234") || !strings.Contains(windowsCommand.Args[5], "-ArgumentList '/S'") || !strings.Contains(windowsCommand.Args[5], "Test-Path") {
 		t.Fatalf("unexpected windows command args: %#v", windowsCommand.Args)
 	}
 
-	macCommand, err := buildInstallUpdateCommand("darwin", "/tmp/IT工具箱.dmg", "/Applications/AhuTools.app/Contents/MacOS/AhuTools")
+	macCommand, err := buildInstallUpdateCommand("darwin", "/tmp/IT工具箱.dmg", "/Applications/AhuTools.app/Contents/MacOS/AhuTools", 1234)
 	if err != nil {
 		t.Fatalf("expected mac command: %v", err)
 	}
@@ -255,7 +255,7 @@ func TestBuildInstallUpdateCommand(t *testing.T) {
 		t.Fatalf("unexpected mac command path %q args: %#v", macCommand.Path, macCommand.Args)
 	}
 
-	if _, err := buildInstallUpdateCommand("linux", "/tmp/app", "/tmp/app"); err == nil {
+	if _, err := buildInstallUpdateCommand("linux", "/tmp/app", "/tmp/app", 1234); err == nil {
 		t.Fatal("expected linux install command to be unsupported")
 	}
 }
