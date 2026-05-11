@@ -35,14 +35,29 @@
     </el-scrollbar>
 
     <div class="sidebar-footer">
-      <el-tooltip :disabled="!collapsed" content="检查更新" placement="right">
-        <el-button class="update-entry" text @click="$emit('open-updates')">
-          <el-badge :is-dot="updateAvailable" :hidden="!updateAvailable" class="update-badge">
-            <span class="update-icon">↻</span>
-          </el-badge>
-          <span v-if="!collapsed" class="update-label">检查更新</span>
-        </el-button>
-      </el-tooltip>
+      <el-popover placement="right-end" trigger="click" :width="220" popper-class="settings-popover">
+        <template #reference>
+          <el-button class="sidebar-settings-entry" text>
+            <el-badge :is-dot="updateAvailable" :hidden="!updateAvailable" class="settings-badge">
+              <span class="settings-icon">⚙</span>
+            </el-badge>
+            <span v-if="!collapsed" class="settings-label">设置</span>
+          </el-button>
+        </template>
+
+        <div class="settings-menu">
+          <div class="settings-menu-title">应用设置</div>
+          <button class="settings-menu-item" type="button" @click="$emit('open-tool-order')">
+            <span class="settings-menu-icon">↕</span>
+            <span>工具排序</span>
+          </button>
+          <button class="settings-menu-item" type="button" @click="$emit('open-updates')">
+            <span class="settings-menu-icon">↻</span>
+            <span>检查更新</span>
+            <span v-if="updateAvailable" class="settings-menu-dot" />
+          </button>
+        </div>
+      </el-popover>
     </div>
   </div>
 </template>
@@ -80,7 +95,7 @@ export default {
       default: false,
     },
   },
-  emits: ['select-tool', 'toggle-collapse', 'open-updates'],
+  emits: ['select-tool', 'toggle-collapse', 'open-updates', 'open-tool-order'],
   computed: {
     groupedTools() {
       const groups = []

@@ -12,7 +12,7 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-const Version = "1.1.5"
+const Version = "1.1.6"
 const AppName = "IT工具箱"
 const Author = "zhichi"
 

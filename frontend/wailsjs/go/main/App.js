@@ -30,6 +30,10 @@ export function GetAuthor() {
   return window['go']['main']['App']['GetAuthor']();
 }
 
+export function GetToolOrder() {
+  return window['go']['main']['App']['GetToolOrder']();
+}
+
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
@@ -40,4 +44,8 @@ export function InstallDownloadedUpdate(arg1) {
 
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
+}
+
+export function SaveToolOrder(arg1) {
+  return window['go']['main']['App']['SaveToolOrder'](arg1);
 }

@@ -152,7 +152,7 @@ body {
   border-top: 1px solid #e5e7eb;
 }
 
-.update-entry.el-button {
+.sidebar-settings-entry.el-button {
   justify-content: flex-start;
   width: 100%;
   height: 42px;
@@ -161,30 +161,86 @@ body {
   border-radius: 10px;
 }
 
-.update-entry.el-button:hover {
+.sidebar-settings-entry.el-button:hover {
   color: #2563eb;
   background: #eff6ff;
 }
 
-.sidebar.is-collapsed .update-entry.el-button {
+.sidebar.is-collapsed .sidebar-settings-entry.el-button {
   justify-content: center;
   padding: 0;
 }
 
-.update-badge {
+.settings-badge {
   display: inline-flex;
   align-items: center;
 }
 
-.update-icon {
-  font-size: 1rem;
-  font-weight: 700;
+.settings-icon {
+  font-size: 1.1rem;
   line-height: 1;
 }
 
-.update-label {
+.settings-label {
   margin-left: 10px;
   font-weight: 700;
+}
+
+.settings-popover.el-popover {
+  padding: 10px;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 14px 38px rgba(45, 55, 72, 0.16);
+}
+
+.settings-menu {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-menu-title {
+  padding: 4px 8px 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+.settings-menu-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 700;
+  color: #4b5563;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+}
+
+.settings-menu-item:hover {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.settings-menu-icon {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.settings-menu-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  background: #f56c6c;
+  border-radius: 999px;
 }
 
 .nav-group {
@@ -337,6 +393,46 @@ body {
 
 .tool-feedback {
   margin: 16px 0;
+}
+
+.tool-order-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tool-order-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.tool-order-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tool-order-copy strong,
+.tool-order-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-order-copy span {
+  color: #6b7280;
+}
+
+.tool-order-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
 }
 
 .update-action-bar {

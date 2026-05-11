@@ -16,8 +16,12 @@ export function GetAppName():Promise<string>;
 
 export function GetAuthor():Promise<string>;
 
+export function GetToolOrder():Promise<Array<string>>;
+
 export function GetVersion():Promise<string>;
 
 export function InstallDownloadedUpdate(arg1:string):Promise<main.InstallUpdateResponse>;
 
 export function SaveConfig(arg1:main.Config):Promise<void>;
+
+export function SaveToolOrder(arg1:Array<string>):Promise<void>;

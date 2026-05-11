@@ -17,6 +17,12 @@ type Config struct {
 	Description string `json:"description"`
 }
 
+type ToolOrder struct {
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	ToolKey  string `gorm:"uniqueIndex;not null" json:"toolKey"`
+	Position int    `gorm:"not null" json:"position"`
+}
+
 type DecryptService struct {
 	db *gorm.DB
 }
@@ -32,19 +38,20 @@ func NewDecryptService() (*DecryptService, error) {
 		return nil, fmt.Errorf("创建配置目录失败: %v", err)
 	}
 
-	dbPath := filepath.Join(dbDir, "config.db")
+	return newDecryptServiceWithDBPath(filepath.Join(dbDir, "config.db"))
+}
+
+func newDecryptServiceWithDBPath(dbPath string) (*DecryptService, error) {
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("打开数据库失败: %v", err)
 	}
 
-	if err := db.AutoMigrate(&Config{}); err != nil {
+	if err := db.AutoMigrate(&Config{}, &ToolOrder{}); err != nil {
 		return nil, fmt.Errorf("数据库迁移失败: %v", err)
 	}
 
 	service := &DecryptService{db: db}
-	
-	// 初始化默认配置
 	service.initDefaultConfigs()
 
 	return service, nil
@@ -96,11 +103,11 @@ func (s *DecryptService) SaveConfig(config Config) error {
 
 	var existing Config
 	result := s.db.Where("environment = ?", config.Environment).First(&existing)
-	
+
 	if result.Error == gorm.ErrRecordNotFound {
 		return s.db.Create(&config).Error
 	}
-	
+
 	existing.Key = config.Key
 	existing.Description = config.Description
 	return s.db.Save(&existing).Error
@@ -110,14 +117,74 @@ func (s *DecryptService) DeleteConfig(environment string) error {
 	return s.db.Where("environment = ?", environment).Delete(&Config{}).Error
 }
 
+func (s *DecryptService) GetToolOrder() ([]string, error) {
+	var orders []ToolOrder
+	if err := s.db.Order("position ASC").Find(&orders).Error; err != nil {
+		return nil, err
+	}
+
+	toolKeys := make([]string, 0, len(orders))
+	for _, order := range orders {
+		toolKeys = append(toolKeys, order.ToolKey)
+	}
+	return toolKeys, nil
+}
+
+func (s *DecryptService) SaveToolOrder(toolKeys []string) error {
+	seen := make(map[string]bool, len(toolKeys))
+	orders := make([]ToolOrder, 0, len(toolKeys))
+	for _, toolKey := range toolKeys {
+		if toolKey == "" || seen[toolKey] {
+			continue
+		}
+		seen[toolKey] = true
+		orders = append(orders, ToolOrder{ToolKey: toolKey, Position: len(orders)})
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&ToolOrder{}).Error; err != nil {
+			return err
+		}
+		for _, order := range orders {
+			if err := tx.Create(&order).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (a *App) GetAllConfigs() ([]Config, error) {
+	if a.service == nil {
+		return nil, errors.New("配置服务未初始化")
+	}
 	return a.service.GetAllConfigs()
 }
 
 func (a *App) SaveConfig(config Config) error {
+	if a.service == nil {
+		return errors.New("配置服务未初始化")
+	}
 	return a.service.SaveConfig(config)
 }
 
 func (a *App) DeleteConfig(environment string) error {
+	if a.service == nil {
+		return errors.New("配置服务未初始化")
+	}
 	return a.service.DeleteConfig(environment)
+}
+
+func (a *App) GetToolOrder() ([]string, error) {
+	if a.service == nil {
+		return nil, errors.New("配置服务未初始化")
+	}
+	return a.service.GetToolOrder()
+}
+
+func (a *App) SaveToolOrder(toolKeys []string) error {
+	if a.service == nil {
+		return errors.New("配置服务未初始化")
+	}
+	return a.service.SaveToolOrder(toolKeys)
 }
