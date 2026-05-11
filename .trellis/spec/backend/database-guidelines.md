@@ -20,7 +20,9 @@
 
 ## Data Model
 
-当前持久化 model 是 `service.go` 中的 `Config`：
+当前持久化 models 位于 `service.go`。
+
+解密配置 model 是 `Config`：
 
 ```go
 type Config struct {
@@ -33,6 +35,18 @@ type Config struct {
 
 `environment` 字段是唯一索引，用于查找 decrypt operations 的 config。`Description` 保存 UI 展示用的环境说明。
 
+工具排序 model 是 `ToolOrder`：
+
+```go
+type ToolOrder struct {
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	ToolKey  string `gorm:"uniqueIndex;not null" json:"toolKey"`
+	Position int    `gorm:"not null" json:"position"`
+}
+```
+
+`ToolOrder` 只保存 frontend tool key 和排序位置，不保存 Vue component、工具名称或完整工具 metadata。Frontend 的 `frontend/src/tools/index.js` 仍是工具定义 source of truth；backend 只负责持久化 key 顺序。
+
 ---
 
 ## Query Patterns
@@ -43,9 +57,11 @@ Database access 应保持在 `DecryptService` methods 后面。`service.go` 中�
 - `GetAllConfigs()` 使用 `Find(&configs)`。
 - `SaveConfig(config Config)` 校验 `environment` 和 16-byte-or-empty `key`，检查现有 environment，然后 `Create` 或 `Save`。
 - `DeleteConfig(environment string)` 按 environment 删除。
+- `GetToolOrder() ([]string, error)` 按 `position ASC` 读取 `ToolOrder`，只返回 tool key 列表。
+- `SaveToolOrder(toolKeys []string) error` 去重、过滤空 key，并在 transaction 中替换整份排序。
 - `initDefaultConfigs()` 在缺失时 seed `test` 和 `production` configs，默认 key 为空，并带有中文 descriptions。
 
-Wails-facing methods on `*App` 应委托给 service，不要自己打开 database connection。
+Wails-facing methods on `*App` 应委托给 service，不要自己打开 database connection。依赖 `a.service` 的 Wails methods 必须先检查 service 是否为 nil，并返回安全错误（例如 `配置服务未初始化`）。
 
 ---
 
@@ -54,12 +70,12 @@ Wails-facing methods on `*App` 应委托给 service，不要自己打开 databas
 当前 schema management 是 automatic：
 
 ```go
-if err := db.AutoMigrate(&Config{}); err != nil {
+if err := db.AutoMigrate(&Config{}, &ToolOrder{}); err != nil {
 	return nil, fmt.Errorf("数据库迁移失败: %v", err)
 }
 ```
 
-当前没有 versioned migrations。新增字段或修改 schema 时，需要考虑用户机器上已经存在的 `~/.ahutools/config.db`。这是 local desktop application，因此 SQLite compatibility 和 data preservation 很重要。
+当前没有 versioned migrations。新增字段或修改 schema 时，需要考虑用户机器上已经存在的 `~/.ahutools/config.db`。这是 local desktop application，因此 SQLite compatibility 和 data preservation 很重要。新增表应通过 `AutoMigrate` 保留已有 `Config` 数据。
 
 ---
 
