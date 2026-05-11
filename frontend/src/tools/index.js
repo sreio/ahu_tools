@@ -1,5 +1,6 @@
 import Base64Tool from './Base64Tool.vue'
 import DecryptTool from './DecryptTool.vue'
+import H5DecryptTool from './H5DecryptTool.vue'
 import HashTool from './HashTool.vue'
 import HtmlEntityTool from './HtmlEntityTool.vue'
 import JsonTool from './JsonTool.vue'
@@ -18,6 +19,14 @@ export const tools = [
     description: 'AES-CBC 解密',
     shortName: '解',
     component: DecryptTool,
+  },
+  {
+    key: 'h5-decrypt',
+    name: 'H5数据解密',
+    group: '现有工具',
+    description: 'RSA + AES-256-CBC 解密',
+    shortName: 'H5',
+    component: H5DecryptTool,
   },
   {
     key: 'json',

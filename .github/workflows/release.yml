@@ -69,7 +69,7 @@ jobs:
           wails build -platform ${{ matrix.platform }} -nsis
           $installer = Get-ChildItem -Path build/bin -Recurse -Filter "*.exe" | Select-Object -First 1
           if (-not $installer) { throw "Windows installer not found" }
-          Copy-Item $installer.FullName "IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}"
+          Copy-Item $installer.FullName "iTools-${{ github.ref_name }}-${{ matrix.artifact-suffix }}"
 
       - name: Build macOS app
         if: runner.os == 'macOS'
@@ -83,19 +83,19 @@ jobs:
           codesign --force --deep --sign - "$APP_PATH"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           create-dmg \
-            --volname "IT工具箱" \
+            --volname "iTools" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
             --app-drop-link 450 185 \
-            "IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}" \
+            "iTools-${{ github.ref_name }}-${{ matrix.artifact-suffix }}" \
             "$APP_PATH"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}
-          path: IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}
+          name: iTools-${{ github.ref_name }}-${{ matrix.artifact-suffix }}
+          path: iTools-${{ github.ref_name }}-${{ matrix.artifact-suffix }}
           if-no-files-found: error
 
   release:

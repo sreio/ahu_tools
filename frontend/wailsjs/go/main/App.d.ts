@@ -14,6 +14,8 @@ export function DownloadUpdate(arg1:main.DownloadAsset):Promise<main.DownloadUpd
 
 export function GetAllConfigs():Promise<Array<main.Config>>;
 
+export function GetAllH5DecryptConfigs():Promise<Array<main.H5DecryptConfig>>;
+
 export function GetAppName():Promise<string>;
 
 export function GetAuthor():Promise<string>;
@@ -24,10 +26,14 @@ export function GetToolOrder():Promise<Array<string>>;
 
 export function GetVersion():Promise<string>;
 
+export function H5Decrypt(arg1:main.H5DecryptRequest):Promise<main.H5DecryptResponse>;
+
 export function InstallDownloadedUpdate(arg1:string):Promise<main.InstallUpdateResponse>;
 
 export function RecordToolHistory(arg1:main.ToolHistory):Promise<void>;
 
 export function SaveConfig(arg1:main.Config):Promise<void>;
+
+export function SaveH5DecryptConfig(arg1:main.H5DecryptConfig):Promise<void>;
 
 export function SaveToolOrder(arg1:Array<string>):Promise<void>;

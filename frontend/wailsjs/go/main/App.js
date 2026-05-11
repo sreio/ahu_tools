@@ -26,6 +26,10 @@ export function GetAllConfigs() {
   return window['go']['main']['App']['GetAllConfigs']();
 }
 
+export function GetAllH5DecryptConfigs() {
+  return window['go']['main']['App']['GetAllH5DecryptConfigs']();
+}
+
 export function GetAppName() {
   return window['go']['main']['App']['GetAppName']();
 }
@@ -46,6 +50,10 @@ export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
 
+export function H5Decrypt(arg1) {
+  return window['go']['main']['App']['H5Decrypt'](arg1);
+}
+
 export function InstallDownloadedUpdate(arg1) {
   return window['go']['main']['App']['InstallDownloadedUpdate'](arg1);
 }
@@ -56,6 +64,10 @@ export function RecordToolHistory(arg1) {
 
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
+}
+
+export function SaveH5DecryptConfig(arg1) {
+  return window['go']['main']['App']['SaveH5DecryptConfig'](arg1);
 }
 
 export function SaveToolOrder(arg1) {

@@ -95,14 +95,15 @@ body {
   width: 42px;
   height: 42px;
   place-items: center;
-  color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+  background: #ffffff;
   border-radius: 12px;
 }
 
-.brand-logo svg {
-  width: 24px;
-  height: 24px;
+.brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .brand-copy {

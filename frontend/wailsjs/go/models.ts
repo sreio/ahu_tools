@@ -90,6 +90,72 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class H5DecryptConfig {
+	    id: number;
+	    environment: string;
+	    description: string;
+	    request_aes_256_cbc_iv: string;
+	    request_aes_256_cbc_key: string;
+	    server_rsa_private_key: string;
+	    response_aes_256_cbc_iv: string;
+	    response_aes_256_cbc_key: string;
+	    client_rsa_private_key: string;
+
+	    static createFrom(source: any = {}) {
+	        return new H5DecryptConfig(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.environment = source["environment"];
+	        this.description = source["description"];
+	        this.request_aes_256_cbc_iv = source["request_aes_256_cbc_iv"];
+	        this.request_aes_256_cbc_key = source["request_aes_256_cbc_key"];
+	        this.server_rsa_private_key = source["server_rsa_private_key"];
+	        this.response_aes_256_cbc_iv = source["response_aes_256_cbc_iv"];
+	        this.response_aes_256_cbc_key = source["response_aes_256_cbc_key"];
+	        this.client_rsa_private_key = source["client_rsa_private_key"];
+	    }
+	}
+	export class H5DecryptRequest {
+	    environment: string;
+	    mode: string;
+	    data: string;
+
+	    static createFrom(source: any = {}) {
+	        return new H5DecryptRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.environment = source["environment"];
+	        this.mode = source["mode"];
+	        this.data = source["data"];
+	    }
+	}
+	export class H5DecryptResponse {
+	    success: boolean;
+	    data?: any;
+	    raw?: string;
+	    isJson: boolean;
+	    mode?: string;
+	    error?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new H5DecryptResponse(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.data = source["data"];
+	        this.raw = source["raw"];
+	        this.isJson = source["isJson"];
+	        this.mode = source["mode"];
+	        this.error = source["error"];
+	    }
+	}
 	export class InstallUpdateResponse {
 	    success: boolean;
 	    message?: string;

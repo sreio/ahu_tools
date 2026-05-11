@@ -26,8 +26,10 @@
         :app-name="appName"
         :version="version"
         :history-restore="historyRestore"
+        :h5-configs="h5Configs"
         @toast="showToast"
         @open-settings="showSettings = true"
+        @open-h5-settings="showH5Settings = true"
         @open-history="openToolHistory"
         @tool-action="recordToolAction"
       />
@@ -37,6 +39,12 @@
       v-model="showSettings"
       :configs="configs"
       @save="saveConfig"
+    />
+
+    <H5ConfigModal
+      v-model="showH5Settings"
+      :configs="h5Configs"
+      @save="saveH5Config"
     />
 
     <el-dialog v-model="showUpdates" title="应用更新" width="760px" destroy-on-close>
@@ -105,11 +113,13 @@
 <script>
 import { ElMessage } from 'element-plus'
 import ConfigModal from './components/ConfigModal.vue'
+import H5ConfigModal from './components/H5ConfigModal.vue'
 import SidebarNav from './components/SidebarNav.vue'
 import {
   CheckForUpdate,
   ClearToolHistory,
   GetAllConfigs,
+  GetAllH5DecryptConfigs,
   GetAppName,
   GetAuthor,
   GetToolHistory,
@@ -117,6 +127,7 @@ import {
   GetVersion,
   RecordToolHistory,
   SaveConfig,
+  SaveH5DecryptConfig,
   SaveToolOrder,
 } from './services/wailsApi'
 import { tools as defaultTools } from './tools'
@@ -127,6 +138,7 @@ export default {
   name: 'App',
   components: {
     ConfigModal,
+    H5ConfigModal,
     SidebarNav,
     UpdateTool,
   },
@@ -135,10 +147,12 @@ export default {
       tools: [...defaultTools],
       activeTool: 'decrypt',
       appName: 'IT工具箱',
-      version: '1.1.8',
+      version: '1.1.9',
       author: 'sreio',
       configs: [],
+      h5Configs: [],
       showSettings: false,
+      showH5Settings: false,
       showUpdates: false,
       showToolOrder: false,
       showToolHistory: false,
@@ -179,6 +193,7 @@ export default {
     await this.loadToolOrder()
     await this.loadToolHistory()
     await this.loadConfigs()
+    await this.loadH5Config()
     await this.checkUpdateSilently()
   },
   beforeUnmount() {
@@ -199,6 +214,13 @@ export default {
         this.configs = await GetAllConfigs()
       } catch {
         this.showToast({ message: '加载配置失败', type: 'error' })
+      }
+    },
+    async loadH5Config() {
+      try {
+        this.h5Configs = await GetAllH5DecryptConfigs()
+      } catch {
+        this.showToast({ message: '加载 H5 配置失败', type: 'error' })
       }
     },
     async loadToolOrder() {
@@ -337,6 +359,36 @@ export default {
         await this.loadConfigs()
       } catch {
         this.showToast({ message: '保存配置失败', type: 'error' })
+      }
+    },
+    async saveH5Config(config) {
+      if (!config.environment) {
+        this.showToast({ message: '请输入 H5 环境标识', type: 'error' })
+        return
+      }
+      if (config.request_aes_256_cbc_iv && config.request_aes_256_cbc_iv.length !== 16) {
+        this.showToast({ message: '请求 AES_256_CBC_IV 必须为16字节', type: 'error' })
+        return
+      }
+      if (config.request_aes_256_cbc_key && config.request_aes_256_cbc_key.length !== 32) {
+        this.showToast({ message: '请求 AES_256_CBC_KEY 必须为32字节', type: 'error' })
+        return
+      }
+      if (config.response_aes_256_cbc_iv && config.response_aes_256_cbc_iv.length !== 16) {
+        this.showToast({ message: '响应 AES_256_CBC_IV 必须为16字节', type: 'error' })
+        return
+      }
+      if (config.response_aes_256_cbc_key && config.response_aes_256_cbc_key.length !== 32) {
+        this.showToast({ message: '响应 AES_256_CBC_KEY 必须为32字节', type: 'error' })
+        return
+      }
+
+      try {
+        await SaveH5DecryptConfig(config)
+        this.showToast({ message: 'H5 配置保存成功', type: 'success' })
+        await this.loadH5Config()
+      } catch (error) {
+        this.showToast({ message: error?.message || '保存 H5 配置失败', type: 'error' })
       }
     },
     async checkUpdateSilently() {

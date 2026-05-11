@@ -3,6 +3,7 @@ import { applySavedToolOrder, normalizeToolOrder } from './order'
 
 const defaultTools = [
   { key: 'decrypt', name: '数据解密' },
+  { key: 'h5-decrypt', name: 'H5数据解密' },
   { key: 'json', name: 'JSON' },
   { key: 'base64', name: 'Base64' },
   { key: 'url', name: 'URL' },
@@ -13,6 +14,7 @@ describe('tool ordering', () => {
     expect(applySavedToolOrder(defaultTools, ['json', 'decrypt']).map((tool) => tool.key)).toEqual([
       'json',
       'decrypt',
+      'h5-decrypt',
       'base64',
       'url',
     ])
@@ -23,12 +25,19 @@ describe('tool ordering', () => {
       'json',
       'url',
       'decrypt',
+      'h5-decrypt',
       'base64',
     ])
   })
 
   it('uses default order when saved order is empty', () => {
-    expect(applySavedToolOrder(defaultTools, []).map((tool) => tool.key)).toEqual(['decrypt', 'json', 'base64', 'url'])
+    expect(applySavedToolOrder(defaultTools, []).map((tool) => tool.key)).toEqual([
+      'decrypt',
+      'h5-decrypt',
+      'json',
+      'base64',
+      'url',
+    ])
   })
 
   it('normalizes candidate keys before saving', () => {

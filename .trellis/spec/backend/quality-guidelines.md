@@ -12,10 +12,10 @@
 - Backend 是 Wails v2 Go desktop layer。
 - Frontend 是 `frontend/` 下的 Vue 3 + Vite。
 - `frontend/package.json` 当前只定义 `dev`、`build`、`preview` scripts。
-- 当前没有 Go `*_test.go` files。
-- 当前没有 frontend `*.test.*`、`*.spec.*` 或 `__tests__` files。
+- 当前已有 Go `*_test.go` files，backend 相关改动应运行 `go test ./...`。
+- 当前已有 frontend Vitest tests，frontend 相关改动应运行 `npm run test --prefix frontend`。
 - 当前没有 project lint/typecheck scripts。
-- Release CI 会 build artifacts，但当前没有独立的 lint/test/typecheck quality gate。
+- Release CI 会 build artifacts，但当前没有独立的 lint/typecheck quality gate。
 
 除非 repository 中实际新增，否则不要声称已有 test、lint、typecheck 或 CI quality system。
 
@@ -50,7 +50,7 @@ Go changes 完成前应使用 `gofmt` 格式化。
 
 ## Testing Requirements
 
-项目当前没有 established tests。未来 non-trivial backend changes 在可行时应补测试，尤其覆盖：
+项目已有 established tests。Non-trivial backend changes 应补测试，尤其覆盖：
 
 - AES-CBC decrypt success and failure cases；
 - invalid Base64 ciphertext input；
@@ -58,7 +58,9 @@ Go changes 完成前应使用 `gofmt` 格式化。
 - decoded ciphertext length not aligned to the AES block size；
 - invalid PKCS7 padding；
 - missing 或 duplicate config environments；
-- 不应依赖真实 user home directory 的 database behavior。
+- 不应依赖真实 user home directory 的 database behavior；
+- SQLite/GORM schema compatibility with existing local database files；
+- Wails boundary methods that persist or retrieve local state。
 
 报告 backend work 完成前，至少运行相关 build/verification commands。
 
@@ -75,10 +77,16 @@ go test ./...
 这是标准 Go test command。即使没有 tests，它也能捕获 compilation failures。
 
 ```bash
-npm run build
+npm run test --prefix frontend
 ```
 
-直接验证 frontend build output 时，在 `frontend/` 下运行。
+运行 frontend Vitest test suite。
+
+```bash
+npm run build --prefix frontend
+```
+
+直接验证 frontend build output。
 
 ```bash
 make build

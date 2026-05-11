@@ -19,8 +19,20 @@ type legacyToolHistory struct {
 	CreatedAt time.Time `gorm:"index"`
 }
 
+type legacyH5DecryptConfig struct {
+	ID                  uint `gorm:"primaryKey"`
+	AES256CBCIV         string
+	AES256CBCKey        string
+	ClientRSAPublicKey  string
+	ServerRSAPrivateKey string
+}
+
 func (legacyToolHistory) TableName() string {
 	return "tool_histories"
+}
+
+func (legacyH5DecryptConfig) TableName() string {
+	return "h5_decrypt_configs"
 }
 
 func newTestDecryptService(t *testing.T) *DecryptService {
@@ -75,6 +87,130 @@ func TestNewDecryptServiceWithDBPathInitializesDefaultConfigs(t *testing.T) {
 		if _, err := service.GetConfig(environment); err != nil {
 			t.Fatalf("expected default config %q: %v", environment, err)
 		}
+	}
+}
+
+func TestNewDecryptServiceDropsLegacyH5ConfigAndInitializesDefaults(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "config.db")
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open legacy db: %v", err)
+	}
+	if err := db.AutoMigrate(&legacyH5DecryptConfig{}); err != nil {
+		t.Fatalf("migrate legacy h5 config: %v", err)
+	}
+	if err := db.Create(&legacyH5DecryptConfig{ID: 1, AES256CBCIV: "abcdefghijklmnop", AES256CBCKey: "12345678901234567890123456789012"}).Error; err != nil {
+		t.Fatalf("create legacy h5 config: %v", err)
+	}
+	if sqlDB, err := db.DB(); err == nil {
+		_ = sqlDB.Close()
+	}
+
+	service, err := newDecryptServiceWithDBPath(dbPath)
+	if err != nil {
+		t.Fatalf("open migrated service: %v", err)
+	}
+	config, err := service.GetH5DecryptConfig("test")
+	if err != nil {
+		t.Fatalf("get default h5 config: %v", err)
+	}
+	if config.RequestAES256CBCIV != "" || config.RequestAES256CBCKey != "" || config.ResponseAES256CBCKey != "" {
+		t.Fatalf("h5 config = %#v, want legacy values discarded", config)
+	}
+	if _, err := service.GetH5DecryptConfig("production"); err != nil {
+		t.Fatalf("expected production h5 default config: %v", err)
+	}
+}
+
+func TestGetAllH5DecryptConfigsInitializesDefaultEnvironments(t *testing.T) {
+	service := newTestDecryptService(t)
+
+	configs, err := service.GetAllH5DecryptConfigs()
+	if err != nil {
+		t.Fatalf("get h5 configs: %v", err)
+	}
+	if len(configs) != 2 {
+		t.Fatalf("h5 config count = %d, want 2", len(configs))
+	}
+	if configs[0].Environment != "test" || configs[0].Description != "测试环境" {
+		t.Fatalf("h5 config[0] = %#v, want test default", configs[0])
+	}
+	if configs[1].Environment != "production" || configs[1].Description != "生产环境" {
+		t.Fatalf("h5 config[1] = %#v, want production default", configs[1])
+	}
+}
+
+func TestH5DecryptConfigPersistsSeparatelyFromLegacyConfigs(t *testing.T) {
+	service := newTestDecryptService(t)
+
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{
+		Environment:          "test",
+		Description:          "测试 H5 环境",
+		RequestAES256CBCIV:   "abcdefghijklmnop",
+		RequestAES256CBCKey:  "12345678901234567890123456789012",
+		ServerRSAPrivateKey:  "server private key",
+		ResponseAES256CBCIV:  "ponmlkjihgfedcba",
+		ResponseAES256CBCKey: "abcdefghijklmnopabcdefghijklmnop",
+		ClientRSAPrivateKey:  "client private key",
+	}); err != nil {
+		t.Fatalf("save h5 config: %v", err)
+	}
+
+	legacyConfig, err := service.GetConfig("test")
+	if err != nil {
+		t.Fatalf("get legacy config: %v", err)
+	}
+	if legacyConfig.Key != "" || legacyConfig.Description != "测试环境" {
+		t.Fatalf("legacy config = %#v, want unchanged default", legacyConfig)
+	}
+
+	got, err := service.GetH5DecryptConfig("test")
+	if err != nil {
+		t.Fatalf("get h5 config: %v", err)
+	}
+	if got.Environment != "test" || got.Description != "测试 H5 环境" {
+		t.Fatalf("h5 config = %#v, want saved environment metadata", got)
+	}
+	if got.RequestAES256CBCIV != "abcdefghijklmnop" || got.RequestAES256CBCKey != "12345678901234567890123456789012" {
+		t.Fatalf("h5 config = %#v, want saved request AES settings", got)
+	}
+	if got.ResponseAES256CBCIV != "ponmlkjihgfedcba" || got.ResponseAES256CBCKey != "abcdefghijklmnopabcdefghijklmnop" {
+		t.Fatalf("h5 config = %#v, want saved response AES settings", got)
+	}
+	if got.ServerRSAPrivateKey != "server private key" || got.ClientRSAPrivateKey != "client private key" {
+		t.Fatalf("h5 config = %#v, want saved RSA settings", got)
+	}
+}
+
+func TestSaveH5DecryptConfigValidatesAESKeyAndIV(t *testing.T) {
+	service := newTestDecryptService(t)
+
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{RequestAES256CBCIV: "abcdefghijklmnop"}); err == nil {
+		t.Fatalf("expected missing environment error")
+	}
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{Environment: "test", RequestAES256CBCIV: "short"}); err == nil {
+		t.Fatalf("expected invalid request IV error")
+	}
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{Environment: "test", RequestAES256CBCKey: "short"}); err == nil {
+		t.Fatalf("expected invalid request AES key error")
+	}
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{Environment: "test", ResponseAES256CBCIV: "short"}); err == nil {
+		t.Fatalf("expected invalid response IV error")
+	}
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{Environment: "test", ResponseAES256CBCKey: "short"}); err == nil {
+		t.Fatalf("expected invalid response AES key error")
+	}
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{
+		Environment:          "test",
+		RequestAES256CBCIV:   "abcdefghijklmnop",
+		RequestAES256CBCKey:  "12345678901234567890123456789012",
+		ResponseAES256CBCIV:  "ponmlkjihgfedcba",
+		ResponseAES256CBCKey: "abcdefghijklmnopabcdefghijklmnop",
+	}); err != nil {
+		t.Fatalf("save valid h5 config: %v", err)
+	}
+	if err := service.SaveConfig(Config{Environment: "legacy", Key: "12345678901234567890123456789012"}); err == nil {
+		t.Fatalf("expected legacy config to keep 16-byte key validation")
 	}
 }
 
