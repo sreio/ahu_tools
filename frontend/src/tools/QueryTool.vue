@@ -6,6 +6,9 @@
           <h2>URL 参数</h2>
           <p>解析完整 URL 或 query，并保留重复参数。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'query')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -57,7 +60,13 @@ import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'QueryTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       input: '',
@@ -69,18 +78,52 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'query' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.input = snapshot.input || ''
+      this.baseUrl = snapshot.baseUrl || ''
+      this.hash = snapshot.hash || ''
+      this.rows = Array.isArray(snapshot.rows) && snapshot.rows.length ? snapshot.rows : [{ key: '', value: '' }]
+      this.sortKeys = Boolean(snapshot.sortKeys)
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
+    inputSnapshot() {
+      return {
+        input: this.input,
+        baseUrl: this.baseUrl,
+        hash: this.hash,
+        rows: this.rows,
+        sortKeys: this.sortKeys,
+      }
+    },
     runParse() {
+      const snapshot = this.inputSnapshot()
       const result = parseUrlQuery(this.input)
       if (result.ok) {
         this.baseUrl = result.value.baseUrl
         this.hash = result.value.hash
         this.rows = result.value.rows.length ? result.value.rows : [{ key: '', value: '' }]
       }
-      applyToolResult(this, result, { format: (value) => JSON.stringify(value, null, 2) })
+      applyToolResult(this, result, {
+        format: (value) => JSON.stringify(value, null, 2),
+        toolKey: 'query',
+        action: '解析参数',
+        inputSnapshot: snapshot,
+        inputSummary: `parse · ${this.input.length} chars`,
+      })
     },
     runBuild() {
-      applyToolResult(this, buildUrlQuery(this.rows, { baseUrl: this.baseUrl, hash: this.hash, sort: this.sortKeys }))
+      applyToolResult(this, buildUrlQuery(this.rows, { baseUrl: this.baseUrl, hash: this.hash, sort: this.sortKeys }), {
+        toolKey: 'query',
+        action: '构建参数',
+        inputSnapshot: this.inputSnapshot(),
+        inputSummary: `build · ${this.rows.length} rows`,
+      })
     },
     addRow() {
       this.rows.push({ key: '', value: '' })

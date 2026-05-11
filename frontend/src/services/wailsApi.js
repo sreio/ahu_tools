@@ -1,13 +1,16 @@
 export {
   CheckForUpdate,
+  ClearToolHistory,
   Decrypt,
   DownloadUpdate,
   GetAllConfigs,
   GetAppName,
   GetAuthor,
+  GetToolHistory,
   GetToolOrder,
   GetVersion,
   InstallDownloadedUpdate,
+  RecordToolHistory,
   SaveConfig,
   SaveToolOrder,
 } from '../../wailsjs/go/main/App'

@@ -6,6 +6,9 @@
           <h2>正则测试</h2>
           <p>使用 JavaScript RegExp 测试文本匹配结果。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'regex')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -39,7 +42,13 @@ import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'RegexTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       pattern: '',
@@ -49,10 +58,25 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'regex' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.pattern = snapshot.pattern || ''
+      this.flags = snapshot.flags || 'g'
+      this.text = snapshot.text || ''
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
     runTest() {
       applyToolResult(this, testRegex({ pattern: this.pattern, flags: this.flags, text: this.text }), {
         format: (value) => JSON.stringify(value, null, 2),
+        toolKey: 'regex',
+        action: '测试正则',
+        inputSnapshot: { pattern: this.pattern, flags: this.flags, text: this.text },
+        inputSummary: `/${this.pattern}/${this.flags} · ${this.text.length} chars`,
       })
     },
     async copyOutput() {

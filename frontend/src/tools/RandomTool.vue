@@ -6,6 +6,9 @@
           <h2>UUID / 随机</h2>
           <p>生成 UUID v4、随机 Hex 和 Base62 字符串。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'random')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -49,7 +52,13 @@ import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'RandomTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       mode: 'uuid',
@@ -59,10 +68,25 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'random' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.mode = snapshot.mode || 'uuid'
+      this.length = snapshot.length || 32
+      this.count = snapshot.count || 1
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
     runGenerate() {
       applyToolResult(this, generateRandomStrings({ mode: this.mode, length: this.length, count: this.count }), {
         format: (values) => values.join('\n'),
+        toolKey: 'random',
+        action: this.mode === 'uuid' ? '生成 UUID' : this.mode === 'hex' ? '生成 Hex' : '生成 Base62',
+        inputSnapshot: { mode: this.mode, length: this.length, count: this.count },
+        inputSummary: `${this.mode} · ${this.count} × ${this.mode === 'uuid' ? 'v4' : this.length}`,
       })
     },
     async copyOutput() {

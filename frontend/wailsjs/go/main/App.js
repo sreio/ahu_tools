@@ -6,6 +6,10 @@ export function CheckForUpdate() {
   return window['go']['main']['App']['CheckForUpdate']();
 }
 
+export function ClearToolHistory() {
+  return window['go']['main']['App']['ClearToolHistory']();
+}
+
 export function Decrypt(arg1) {
   return window['go']['main']['App']['Decrypt'](arg1);
 }
@@ -30,6 +34,10 @@ export function GetAuthor() {
   return window['go']['main']['App']['GetAuthor']();
 }
 
+export function GetToolHistory(arg1) {
+  return window['go']['main']['App']['GetToolHistory'](arg1);
+}
+
 export function GetToolOrder() {
   return window['go']['main']['App']['GetToolOrder']();
 }
@@ -40,6 +48,10 @@ export function GetVersion() {
 
 export function InstallDownloadedUpdate(arg1) {
   return window['go']['main']['App']['InstallDownloadedUpdate'](arg1);
+}
+
+export function RecordToolHistory(arg1) {
+  return window['go']['main']['App']['RecordToolHistory'](arg1);
 }
 
 export function SaveConfig(arg1) {

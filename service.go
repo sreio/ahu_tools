@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -23,8 +25,29 @@ type ToolOrder struct {
 	Position int    `gorm:"not null" json:"position"`
 }
 
+type ToolHistory struct {
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	ToolKey       string    `gorm:"index;not null" json:"toolKey"`
+	Action        string    `gorm:"not null" json:"action"`
+	Success       bool      `gorm:"not null" json:"success"`
+	InputSnapshot string    `gorm:"not null" json:"inputSnapshot"`
+	InputSummary  string    `json:"inputSummary"`
+	SchemaVersion int       `gorm:"not null;default:1" json:"schemaVersion"`
+	CreatedAt     time.Time `gorm:"index" json:"createdAt"`
+}
+
+const maxToolHistoryInputSnapshotBytes = 20 * 1024
+
 type DecryptService struct {
 	db *gorm.DB
+}
+
+func migrateLegacyToolHistory(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if migrator.HasTable(&ToolHistory{}) && !migrator.HasColumn(&ToolHistory{}, "InputSnapshot") {
+		return migrator.DropTable(&ToolHistory{})
+	}
+	return nil
 }
 
 func NewDecryptService() (*DecryptService, error) {
@@ -47,7 +70,10 @@ func newDecryptServiceWithDBPath(dbPath string) (*DecryptService, error) {
 		return nil, fmt.Errorf("打开数据库失败: %v", err)
 	}
 
-	if err := db.AutoMigrate(&Config{}, &ToolOrder{}); err != nil {
+	if err := migrateLegacyToolHistory(db); err != nil {
+		return nil, fmt.Errorf("历史记录迁移失败: %v", err)
+	}
+	if err := db.AutoMigrate(&Config{}, &ToolOrder{}, &ToolHistory{}); err != nil {
 		return nil, fmt.Errorf("数据库迁移失败: %v", err)
 	}
 
@@ -154,6 +180,76 @@ func (s *DecryptService) SaveToolOrder(toolKeys []string) error {
 	})
 }
 
+func (s *DecryptService) RecordToolHistory(entry ToolHistory) error {
+	entry.ToolKey = strings.TrimSpace(entry.ToolKey)
+	entry.Action = strings.TrimSpace(entry.Action)
+	entry.InputSummary = strings.TrimSpace(entry.InputSummary)
+	if entry.ToolKey == "" {
+		return errors.New("工具标识不能为空")
+	}
+	if entry.Action == "" {
+		return errors.New("操作名称不能为空")
+	}
+	if entry.InputSnapshot == "" {
+		return errors.New("输入历史不能为空")
+	}
+	if len([]byte(entry.InputSnapshot)) > maxToolHistoryInputSnapshotBytes {
+		return errors.New("输入历史内容过长")
+	}
+
+	actionRunes := []rune(entry.Action)
+	if len(actionRunes) > 80 {
+		entry.Action = string(actionRunes[:80])
+	}
+	summaryRunes := []rune(entry.InputSummary)
+	if len(summaryRunes) > 120 {
+		entry.InputSummary = string(summaryRunes[:120])
+	}
+	if entry.SchemaVersion <= 0 {
+		entry.SchemaVersion = 1
+	}
+	if entry.CreatedAt.IsZero() {
+		entry.CreatedAt = time.Now()
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&entry).Error; err != nil {
+			return err
+		}
+
+		var staleIDs []uint
+		if err := tx.Model(&ToolHistory{}).
+			Order("created_at DESC, id DESC").
+			Offset(200).
+			Pluck("id", &staleIDs).Error; err != nil {
+			return err
+		}
+		if len(staleIDs) == 0 {
+			return nil
+		}
+		return tx.Delete(&ToolHistory{}, staleIDs).Error
+	})
+}
+
+func (s *DecryptService) GetToolHistory(limit int) ([]ToolHistory, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	var history []ToolHistory
+	if err := s.db.Order("created_at DESC, id DESC").Limit(limit).Find(&history).Error; err != nil {
+		return nil, err
+	}
+	return history, nil
+}
+
+func (s *DecryptService) ClearToolHistory() error {
+	return s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&ToolHistory{}).Error
+}
+
 func (a *App) GetAllConfigs() ([]Config, error) {
 	if a.service == nil {
 		return nil, errors.New("配置服务未初始化")
@@ -187,4 +283,25 @@ func (a *App) SaveToolOrder(toolKeys []string) error {
 		return errors.New("配置服务未初始化")
 	}
 	return a.service.SaveToolOrder(toolKeys)
+}
+
+func (a *App) RecordToolHistory(entry ToolHistory) error {
+	if a.service == nil {
+		return errors.New("配置服务未初始化")
+	}
+	return a.service.RecordToolHistory(entry)
+}
+
+func (a *App) GetToolHistory(limit int) ([]ToolHistory, error) {
+	if a.service == nil {
+		return nil, errors.New("配置服务未初始化")
+	}
+	return a.service.GetToolHistory(limit)
+}
+
+func (a *App) ClearToolHistory() error {
+	if a.service == nil {
+		return errors.New("配置服务未初始化")
+	}
+	return a.service.ClearToolHistory()
 }

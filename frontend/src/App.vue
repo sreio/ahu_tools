@@ -6,10 +6,11 @@
         :version="version"
         :author="author"
         :tools="tools"
+        :recent-tools="recentTools"
         :active-tool="activeTool"
         :collapsed="sidebarCollapsed"
         :update-available="updateAvailable"
-        @select-tool="activeTool = $event"
+        @select-tool="selectTool"
         @toggle-collapse="toggleSidebar"
         @open-updates="showUpdates = true"
         @open-tool-order="openToolOrder"
@@ -24,8 +25,11 @@
         :configs="configs"
         :app-name="appName"
         :version="version"
+        :history-restore="historyRestore"
         @toast="showToast"
         @open-settings="showSettings = true"
+        @open-history="openToolHistory"
+        @tool-action="recordToolAction"
       />
     </el-main>
 
@@ -62,6 +66,39 @@
         <el-button type="primary" @click="saveToolOrder">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="showToolHistory" :title="historyDrawerTitle" direction="rtl" size="420px">
+      <el-alert
+        title="只保存输入内容，不保存解析后的结果或输出。"
+        type="info"
+        show-icon
+        :closable="false"
+        class="tool-feedback"
+      />
+      <div v-if="filteredToolHistory.length" class="history-list">
+        <button
+          v-for="item in filteredToolHistory"
+          :key="item.id"
+          class="history-item"
+          type="button"
+          @click="restoreHistoryItem(item)"
+        >
+          <div class="history-copy">
+            <strong>{{ item.action }}</strong>
+            <span>{{ item.inputSummary || '输入历史' }}</span>
+            <small>{{ formatHistoryTime(item.createdAt) }}</small>
+          </div>
+          <el-tag :type="item.success ? 'success' : 'danger'">{{ item.success ? '成功' : '失败' }}</el-tag>
+        </button>
+      </div>
+      <el-empty v-else description="暂无输入历史" />
+      <template #footer>
+        <div class="history-actions">
+          <el-button :disabled="!toolHistory.length" @click="clearToolHistory">清空历史</el-button>
+          <el-button type="primary" @click="showToolHistory = false">关闭</el-button>
+        </div>
+      </template>
+    </el-drawer>
   </el-container>
 </template>
 
@@ -71,11 +108,14 @@ import ConfigModal from './components/ConfigModal.vue'
 import SidebarNav from './components/SidebarNav.vue'
 import {
   CheckForUpdate,
+  ClearToolHistory,
   GetAllConfigs,
   GetAppName,
   GetAuthor,
+  GetToolHistory,
   GetToolOrder,
   GetVersion,
+  RecordToolHistory,
   SaveConfig,
   SaveToolOrder,
 } from './services/wailsApi'
@@ -95,13 +135,18 @@ export default {
       tools: [...defaultTools],
       activeTool: 'decrypt',
       appName: 'IT工具箱',
-      version: '1.1.7',
+      version: '1.1.8',
       author: 'sreio',
       configs: [],
       showSettings: false,
       showUpdates: false,
       showToolOrder: false,
+      showToolHistory: false,
+      historyToolKey: '',
+      historyRestore: null,
       draftToolOrder: [],
+      toolHistory: [],
+      recentTools: [],
       updateInfo: null,
       updateAvailable: false,
       sidebarWidth: 280,
@@ -120,10 +165,19 @@ export default {
       const toolByKey = new Map(defaultTools.map((tool) => [tool.key, tool]))
       return this.draftToolOrder.map((key) => toolByKey.get(key)).filter(Boolean)
     },
+    historyDrawerTitle() {
+      const toolName = this.getToolName(this.historyToolKey || this.activeTool)
+      return `${toolName}历史记录`
+    },
+    filteredToolHistory() {
+      const toolKey = this.historyToolKey || this.activeTool
+      return this.toolHistory.filter((item) => item.toolKey === toolKey)
+    },
   },
   async mounted() {
     await this.loadAppInfo()
     await this.loadToolOrder()
+    await this.loadToolHistory()
     await this.loadConfigs()
     await this.checkUpdateSilently()
   },
@@ -156,6 +210,89 @@ export default {
         this.showToast({ message: '加载工具排序失败', type: 'error' })
       }
     },
+    async loadToolHistory() {
+      try {
+        this.toolHistory = await GetToolHistory(50)
+        this.updateRecentTools()
+      } catch {
+        this.toolHistory = []
+        this.recentTools = []
+      }
+    },
+    updateRecentTools() {
+      const toolByKey = new Map(this.tools.map((tool) => [tool.key, tool]))
+      const recent = []
+      const seen = new Set()
+      for (const item of this.toolHistory) {
+        if (seen.has(item.toolKey)) continue
+        const tool = toolByKey.get(item.toolKey)
+        if (!tool) continue
+        seen.add(item.toolKey)
+        recent.push(tool)
+        if (recent.length === 5) break
+      }
+      this.recentTools = recent
+    },
+    getToolName(toolKey) {
+      return this.getToolDefinition(toolKey)?.name || toolKey
+    },
+    getToolDefinition(toolKey) {
+      return this.tools.find((tool) => tool.key === toolKey) || defaultTools.find((tool) => tool.key === toolKey)
+    },
+    formatHistoryTime(value) {
+      const date = new Date(value)
+      return Number.isNaN(date.getTime()) ? '' : date.toLocaleString()
+    },
+    selectTool(toolKey) {
+      this.activeTool = toolKey
+    },
+    async recordToolAction(payload) {
+      if (!payload?.toolKey || !payload?.action || !payload?.inputSnapshot) return
+      try {
+        await RecordToolHistory({
+          toolKey: payload.toolKey,
+          action: payload.action,
+          success: Boolean(payload.success),
+          inputSnapshot: payload.inputSnapshot,
+          inputSummary: payload.inputSummary || '',
+          schemaVersion: payload.schemaVersion || 1,
+        })
+        await this.loadToolHistory()
+      } catch (error) {
+        this.showToast({ message: error?.message || '记录输入历史失败', type: 'error' })
+      }
+    },
+    async openToolHistory(toolKey) {
+      this.historyToolKey = toolKey || this.activeTool
+      await this.loadToolHistory()
+      this.showToolHistory = true
+    },
+    restoreHistoryItem(item) {
+      try {
+        const snapshot = JSON.parse(item.inputSnapshot)
+        this.activeTool = item.toolKey
+        this.showToolHistory = false
+        this.$nextTick(() => {
+          this.historyRestore = {
+            id: item.id,
+            toolKey: item.toolKey,
+            snapshot,
+          }
+        })
+      } catch {
+        this.showToast({ message: '历史记录内容无效，无法恢复', type: 'error' })
+      }
+    },
+    async clearToolHistory() {
+      try {
+        await ClearToolHistory()
+        this.toolHistory = []
+        this.recentTools = []
+        this.showToast({ message: '输入历史已清空', type: 'success' })
+      } catch {
+        this.showToast({ message: '清空操作历史失败', type: 'error' })
+      }
+    },
     openToolOrder() {
       this.draftToolOrder = this.tools.map((tool) => tool.key)
       this.showToolOrder = true
@@ -177,6 +314,7 @@ export default {
       try {
         await SaveToolOrder(normalizedOrder)
         this.tools = applySavedToolOrder(defaultTools, normalizedOrder)
+        this.updateRecentTools()
         this.showToolOrder = false
         this.showToast({ message: '工具排序已保存', type: 'success' })
       } catch {

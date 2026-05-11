@@ -6,6 +6,9 @@
           <h2>HTML 实体</h2>
           <p>转换 HTML named entity 与数字实体。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'html-entity')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -25,11 +28,17 @@
 
 <script>
 import { decodeHtmlEntities, encodeHtmlEntities } from '../utils/devTools'
-import { applyToolResult, copyToolOutput } from './toolUi'
+import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 
 export default {
   name: 'HtmlEntityTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       input: '',
@@ -37,12 +46,31 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'html-entity' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.input = snapshot.input || ''
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
     runEncode() {
-      applyToolResult(this, encodeHtmlEntities(this.input))
+      applyToolResult(this, encodeHtmlEntities(this.input), {
+        toolKey: 'html-entity',
+        action: '实体编码',
+        inputSnapshot: { input: this.input },
+        inputSummary: summarizeText(this.input),
+      })
     },
     runDecode() {
-      applyToolResult(this, decodeHtmlEntities(this.input))
+      applyToolResult(this, decodeHtmlEntities(this.input), {
+        toolKey: 'html-entity',
+        action: '实体解码',
+        inputSnapshot: { input: this.input },
+        inputSummary: summarizeText(this.input),
+      })
     },
     async copyOutput() {
       await copyToolOutput(this, this.output, 'HTML 实体输出')

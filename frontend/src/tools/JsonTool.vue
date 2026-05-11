@@ -6,6 +6,9 @@
           <h2>JSON</h2>
           <p>格式化、压缩、Unicode 转换和反斜杠转义处理。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'json')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -36,11 +39,17 @@ import {
   minifyJson,
   removeJsonSlashes,
 } from '../utils/devTools'
-import { applyToolResult, copyToolOutput } from './toolUi'
+import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 
 export default {
   name: 'JsonTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       input: '',
@@ -48,27 +57,41 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'json' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.input = snapshot.input || ''
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
-    applyResult(result) {
-      applyToolResult(this, result)
+    applyResult(result, action) {
+      applyToolResult(this, result, {
+        toolKey: 'json',
+        action,
+        inputSnapshot: { input: this.input },
+        inputSummary: summarizeText(this.input),
+      })
     },
     runFormat() {
-      this.applyResult(formatJson(this.input))
+      this.applyResult(formatJson(this.input), '格式化')
     },
     runMinify() {
-      this.applyResult(minifyJson(this.input))
+      this.applyResult(minifyJson(this.input), '压缩')
     },
     runEncodeUnicode() {
-      this.applyResult(encodeChineseUnicode(this.input))
+      this.applyResult(encodeChineseUnicode(this.input), '中文转 Unicode')
     },
     runDecodeUnicode() {
-      this.applyResult(decodeChineseUnicode(this.input))
+      this.applyResult(decodeChineseUnicode(this.input), 'Unicode 转中文')
     },
     runAddSlashes() {
-      this.applyResult(addJsonSlashes(this.input))
+      this.applyResult(addJsonSlashes(this.input), '添加反斜杠')
     },
     runRemoveSlashes() {
-      this.applyResult(removeJsonSlashes(this.input))
+      this.applyResult(removeJsonSlashes(this.input), '去除反斜杠')
     },
     async copyOutput() {
       await copyToolOutput(this, this.output, 'JSON 输出')

@@ -397,33 +397,224 @@ export async function hashText(input, algorithm) {
   }
 }
 
-function decodeBase64UrlJson(part) {
-  const base64 = part.replace(/-/g, '+').replace(/_/g, '/')
-  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
-  const decoded = decodeBase64(padded)
-  if (!decoded.ok) return decoded
+const jwtHmacAlgorithms = {
+  HS256: 'SHA-256',
+  HS384: 'SHA-384',
+  HS512: 'SHA-512',
+}
+
+function normalizeJwtAlgorithm(algorithm) {
+  return String(algorithm || '').trim().toUpperCase()
+}
+
+function getJwtHmacHash(algorithm) {
+  return jwtHmacAlgorithms[normalizeJwtAlgorithm(algorithm)]
+}
+
+function encodeBase64UrlBytes(bytes) {
+  let binary = ''
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+  return encodeBinary(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function encodeBase64UrlText(text) {
+  return encodeBase64UrlBytes(textEncoder.encode(text))
+}
+
+function encodeBase64UrlJson(value) {
+  return encodeBase64UrlText(JSON.stringify(value))
+}
+
+function normalizeBase64Url(part) {
+  const value = String(part || '')
+  if (!/^[A-Za-z0-9_-]*$/.test(value) || value.length % 4 === 1) {
+    return failure('Base64URL 内容无效')
+  }
+  return success(value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '='))
+}
+
+function decodeBase64UrlText(part) {
+  const normalized = normalizeBase64Url(part)
+  if (!normalized.ok) return normalized
+  return decodeBase64(normalized.value)
+}
+
+function decodeBase64UrlBytes(part) {
+  const normalized = normalizeBase64Url(part)
+  if (!normalized.ok) return normalized
 
   try {
-    return success(JSON.parse(decoded.value))
+    const binary = decodeBinary(normalized.value)
+    return success(Uint8Array.from(binary, (char) => char.charCodeAt(0)))
   } catch {
-    return failure('JWT 内容不是有效 JSON')
+    return failure('Base64URL 内容无效')
   }
 }
 
-export function decodeJwt(input) {
+function decodeJwtJsonOrText(part, label) {
+  const decoded = decodeBase64UrlText(part)
+  if (!decoded.ok) return decoded
+
+  try {
+    const value = JSON.parse(decoded.value)
+    return success({ text: JSON.stringify(value, null, 2), value })
+  } catch {
+    return success({ text: decoded.value, value: null, error: `JWT ${label} 不是有效 JSON` })
+  }
+}
+
+function parseJwtJson(input, label) {
+  try {
+    return success(JSON.parse(String(input || '')))
+  } catch {
+    return failure(`JWT ${label} 不是有效 JSON`)
+  }
+}
+
+function splitJwtToken(input) {
   const parts = String(input).trim().split('.')
   if (parts.length !== 3 || parts.some((part) => !part)) {
     return failure('JWT 格式错误，应包含 header.payload.signature 三段内容')
   }
+  return success(parts)
+}
 
-  const header = decodeBase64UrlJson(parts[0])
+function timingSafeEqualBytes(left, right) {
+  if (left.length !== right.length) return false
+
+  let diff = 0
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left[index] ^ right[index]
+  }
+  return diff === 0
+}
+
+async function digestBytes(hash, bytes) {
+  const subtle = globalThis.crypto?.subtle
+  if (!subtle) {
+    return failure('当前环境不支持 Web Crypto HMAC 签名')
+  }
+
+  try {
+    return success(new Uint8Array(await subtle.digest(hash, bytes)))
+  } catch {
+    return failure('JWT 签名失败，请检查当前环境是否支持所选算法')
+  }
+}
+
+async function signJwtInput(signingInput, secret, algorithm) {
+  const hash = getJwtHmacHash(algorithm)
+  if (!hash) {
+    return failure('当前仅支持 HS256、HS384、HS512 HMAC JWT')
+  }
+
+  const blockSize = hash === 'SHA-256' ? 64 : 128
+  let keyBytes = textEncoder.encode(secret)
+  if (keyBytes.length > blockSize) {
+    const digestedKey = await digestBytes(hash, keyBytes)
+    if (!digestedKey.ok) return digestedKey
+    keyBytes = digestedKey.value
+  }
+
+  const keyBlock = new Uint8Array(blockSize)
+  keyBlock.set(keyBytes)
+  const outerPad = new Uint8Array(blockSize)
+  const innerPad = new Uint8Array(blockSize)
+  for (let index = 0; index < blockSize; index += 1) {
+    outerPad[index] = keyBlock[index] ^ 0x5c
+    innerPad[index] = keyBlock[index] ^ 0x36
+  }
+
+  const messageBytes = textEncoder.encode(signingInput)
+  const innerInput = new Uint8Array(innerPad.length + messageBytes.length)
+  innerInput.set(innerPad)
+  innerInput.set(messageBytes, innerPad.length)
+  const innerDigest = await digestBytes(hash, innerInput)
+  if (!innerDigest.ok) return innerDigest
+
+  const outerInput = new Uint8Array(outerPad.length + innerDigest.value.length)
+  outerInput.set(outerPad)
+  outerInput.set(innerDigest.value, outerPad.length)
+  return digestBytes(hash, outerInput)
+}
+
+export function decodeJwt(input) {
+  const parts = splitJwtToken(input)
+  if (!parts.ok) return parts
+
+  const header = decodeJwtJsonOrText(parts.value[0], 'Header')
   if (!header.ok) return failure(header.error)
 
-  const payload = decodeBase64UrlJson(parts[1])
+  const payload = decodeJwtJsonOrText(parts.value[1], 'Payload')
   if (!payload.ok) return failure(payload.error)
 
+  const value = {
+    header: header.value.text,
+    payload: payload.value.text,
+    signature: parts.value[2],
+    algorithm: header.value.value?.alg || '',
+  }
+  if (header.value.error) value.headerError = header.value.error
+  if (payload.value.error) value.payloadError = payload.value.error
+
+  return success(value)
+}
+
+export async function signJwt({ header, payload, secret, algorithm }) {
+  const normalizedSecret = String(secret ?? '')
+  const normalizedAlgorithm = normalizeJwtAlgorithm(algorithm)
+  if (!getJwtHmacHash(normalizedAlgorithm)) {
+    return failure('当前仅支持 HS256、HS384、HS512 HMAC JWT')
+  }
+
+  const parsedHeader = parseJwtJson(header, 'Header')
+  if (!parsedHeader.ok) return parsedHeader
+
+  const parsedPayload = parseJwtJson(payload, 'Payload')
+  if (!parsedPayload.ok) return parsedPayload
+
+  const signedHeader = { ...parsedHeader.value, alg: normalizedAlgorithm }
+  const encodedHeader = encodeBase64UrlJson(signedHeader)
+  const encodedPayload = encodeBase64UrlJson(parsedPayload.value)
+  const signingInput = `${encodedHeader}.${encodedPayload}`
+  const signature = await signJwtInput(signingInput, normalizedSecret, normalizedAlgorithm)
+  if (!signature.ok) return signature
+
+  const encodedSignature = encodeBase64UrlBytes(signature.value)
   return success({
-    header: JSON.stringify(header.value, null, 2),
-    payload: JSON.stringify(payload.value, null, 2),
+    token: `${signingInput}.${encodedSignature}`,
+    header: JSON.stringify(signedHeader, null, 2),
+    payload: JSON.stringify(parsedPayload.value, null, 2),
+    signature: encodedSignature,
+    algorithm: normalizedAlgorithm,
+  })
+}
+
+export async function verifyJwt({ token, secret }) {
+  const normalizedSecret = String(secret ?? '')
+  const parts = splitJwtToken(token)
+  if (!parts.ok) return parts
+
+  const decoded = decodeJwt(token)
+  if (!decoded.ok) return decoded
+  if (decoded.value.headerError) return failure(decoded.value.headerError)
+
+  const algorithm = normalizeJwtAlgorithm(decoded.value.algorithm)
+  if (!getJwtHmacHash(algorithm)) {
+    return failure('当前仅支持 HS256、HS384、HS512 HMAC JWT')
+  }
+
+  const actualSignature = decodeBase64UrlBytes(parts.value[2])
+  if (!actualSignature.ok) return failure('JWT 签名内容无效')
+
+  const signingInput = `${parts.value[0]}.${parts.value[1]}`
+  const expectedSignature = await signJwtInput(signingInput, normalizedSecret, algorithm)
+  if (!expectedSignature.ok) return expectedSignature
+
+  return success({
+    ...decoded.value,
+    valid: timingSafeEqualBytes(actualSignature.value, expectedSignature.value),
   })
 }

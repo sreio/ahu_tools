@@ -19,6 +19,20 @@
     </div>
 
     <el-scrollbar class="tool-nav">
+      <section v-if="recentTools.length" class="nav-group recent-tools-group">
+        <h2 v-if="!collapsed">最近使用</h2>
+        <el-menu :default-active="activeTool" class="tool-menu" @select="$emit('select-tool', $event)">
+          <el-menu-item v-for="tool in recentTools" :key="tool.key" :index="tool.key">
+            <el-tooltip :disabled="!collapsed" :content="tool.name" placement="right">
+              <div class="nav-item-content">
+                <span>{{ collapsed ? (tool.shortName || tool.name.slice(0, 1)) : tool.name }}</span>
+                <small v-if="!collapsed">{{ tool.description }}</small>
+              </div>
+            </el-tooltip>
+          </el-menu-item>
+        </el-menu>
+      </section>
+
       <section v-for="group in groupedTools" :key="group.name" class="nav-group">
         <h2 v-if="!collapsed">{{ group.name }}</h2>
         <el-menu :default-active="activeTool" class="tool-menu" @select="$emit('select-tool', $event)">
@@ -81,6 +95,10 @@ export default {
     tools: {
       type: Array,
       required: true,
+    },
+    recentTools: {
+      type: Array,
+      default: () => [],
     },
     activeTool: {
       type: String,

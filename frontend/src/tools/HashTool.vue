@@ -6,6 +6,9 @@
           <h2>Hash</h2>
           <p>计算常用 SHA hash。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'hash')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -41,7 +44,13 @@ import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'HashTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       algorithm: 'SHA-256',
@@ -50,10 +59,25 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'hash' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.input = snapshot.input || ''
+      this.algorithm = snapshot.algorithm || 'SHA-256'
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
     async runHash() {
       const result = await hashText(this.input, this.algorithm)
-      applyToolResult(this, result)
+      applyToolResult(this, result, {
+        toolKey: 'hash',
+        action: this.algorithm,
+        inputSnapshot: { input: this.input, algorithm: this.algorithm },
+        inputSummary: `${this.algorithm} · ${this.input.length} chars`,
+      })
     },
     async copyOutput() {
       await copyToolOutput(this, this.output, 'Hash 输出')

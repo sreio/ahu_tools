@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function CheckForUpdate():Promise<main.UpdateInfo>;
 
+export function ClearToolHistory():Promise<void>;
+
 export function Decrypt(arg1:main.DecryptRequest):Promise<main.DecryptResponse>;
 
 export function DeleteConfig(arg1:string):Promise<void>;
@@ -16,11 +18,15 @@ export function GetAppName():Promise<string>;
 
 export function GetAuthor():Promise<string>;
 
+export function GetToolHistory(arg1:number):Promise<Array<main.ToolHistory>>;
+
 export function GetToolOrder():Promise<Array<string>>;
 
 export function GetVersion():Promise<string>;
 
 export function InstallDownloadedUpdate(arg1:string):Promise<main.InstallUpdateResponse>;
+
+export function RecordToolHistory(arg1:main.ToolHistory):Promise<void>;
 
 export function SaveConfig(arg1:main.Config):Promise<void>;
 

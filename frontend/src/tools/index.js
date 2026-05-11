@@ -77,9 +77,9 @@ export const tools = [
   },
   {
     key: 'jwt',
-    name: 'JWT Decode',
+    name: 'JWT',
     group: '开发辅助',
-    description: '仅 decode',
+    description: '解码、验签与签名',
     shortName: 'JWT',
     component: JwtTool,
   },

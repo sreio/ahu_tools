@@ -6,6 +6,9 @@
           <h2>URL</h2>
           <p>URL encode/decode，并提示 malformed URI。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'url')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -25,11 +28,17 @@
 
 <script>
 import { decodeUrl, encodeUrl } from '../utils/devTools'
-import { applyToolResult, copyToolOutput } from './toolUi'
+import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 
 export default {
   name: 'UrlTool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       input: '',
@@ -37,15 +46,29 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'url' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.input = snapshot.input || ''
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
-    applyResult(result) {
-      applyToolResult(this, result)
+    applyResult(result, action) {
+      applyToolResult(this, result, {
+        toolKey: 'url',
+        action,
+        inputSnapshot: { input: this.input },
+        inputSummary: summarizeText(this.input),
+      })
     },
     runEncode() {
-      this.applyResult(encodeUrl(this.input))
+      this.applyResult(encodeUrl(this.input), 'Encode')
     },
     runDecode() {
-      this.applyResult(decodeUrl(this.input))
+      this.applyResult(decodeUrl(this.input), 'Decode')
     },
     async copyOutput() {
       await copyToolOutput(this, this.output, 'URL 输出')

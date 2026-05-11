@@ -6,6 +6,9 @@
           <h2>Base64</h2>
           <p>UTF-8 文本 Base64 encode/decode。</p>
         </div>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'base64')">历史</el-button>
+        </div>
       </div>
     </template>
 
@@ -25,11 +28,17 @@
 
 <script>
 import { decodeBase64, encodeBase64 } from '../utils/devTools'
-import { applyToolResult, copyToolOutput } from './toolUi'
+import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 
 export default {
   name: 'Base64Tool',
-  emits: ['toast'],
+  props: {
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
+  },
+  emits: ['toast', 'tool-action', 'open-history'],
   data() {
     return {
       input: '',
@@ -37,15 +46,29 @@ export default {
       error: '',
     }
   },
+  watch: {
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'base64' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.input = snapshot.input || ''
+      this.output = ''
+      this.error = ''
+    },
+  },
   methods: {
-    applyResult(result) {
-      applyToolResult(this, result)
+    applyResult(result, action) {
+      applyToolResult(this, result, {
+        toolKey: 'base64',
+        action,
+        inputSnapshot: { input: this.input },
+        inputSummary: summarizeText(this.input),
+      })
     },
     runEncode() {
-      this.applyResult(encodeBase64(this.input))
+      this.applyResult(encodeBase64(this.input), 'Encode')
     },
     runDecode() {
-      this.applyResult(decodeBase64(this.input))
+      this.applyResult(decodeBase64(this.input), 'Decode')
     },
     async copyOutput() {
       await copyToolOutput(this, this.output, 'Base64 输出')

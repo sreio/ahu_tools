@@ -6,7 +6,10 @@
           <h2>数据解密</h2>
           <p>选择环境并输入加密数据进行 AES-CBC 解密。</p>
         </div>
-        <el-button type="primary" @click="$emit('open-settings')">环境配置</el-button>
+        <div class="tool-header-actions">
+          <el-button @click="$emit('open-history', 'decrypt')">历史</el-button>
+          <el-button type="primary" @click="$emit('open-settings')">环境配置</el-button>
+        </div>
       </div>
     </template>
 
@@ -58,6 +61,7 @@
 
 <script>
 import { Decrypt } from '../services/wailsApi'
+import { copyToolOutput, emitToolAction, summarizeText } from './toolUi'
 
 export default {
   name: 'DecryptTool',
@@ -66,8 +70,12 @@ export default {
       type: Array,
       default: () => [],
     },
+    historyRestore: {
+      type: Object,
+      default: null,
+    },
   },
-  emits: ['toast', 'open-settings'],
+  emits: ['toast', 'open-settings', 'tool-action', 'open-history'],
   data() {
     return {
       environment: '',
@@ -99,8 +107,26 @@ export default {
         }
       },
     },
+    historyRestore(newValue, oldValue) {
+      if (newValue?.toolKey !== 'decrypt' || newValue.id === oldValue?.id) return
+      const snapshot = newValue.inputSnapshot || newValue.snapshot || {}
+      this.environment = snapshot.environment || ''
+      this.encryptedData = snapshot.encryptedData || ''
+      this.result = null
+      this.error = null
+      this.activeTab = 'json'
+    },
   },
   methods: {
+    emitDecryptAction(success) {
+      emitToolAction(this, {
+        toolKey: 'decrypt',
+        action: '解密',
+        success,
+        inputSnapshot: { environment: this.environment, encryptedData: this.encryptedData },
+        inputSummary: `${this.environment || '未选择环境'} · ${summarizeText(this.encryptedData)}`,
+      })
+    },
     async handleDecrypt() {
       this.loading = true
       this.result = null
@@ -119,20 +145,18 @@ export default {
         } else {
           this.error = response.error || '解密失败'
         }
+        this.emitDecryptAction(response.success)
       } catch {
         this.error = '调用解密服务失败，请稍后重试'
+        this.emitDecryptAction(false)
       } finally {
         this.loading = false
       }
     },
     async copyResult() {
       const text = this.activeTab === 'json' ? this.formattedJson : this.result.raw
-      try {
-        await navigator.clipboard.writeText(text)
-        this.$emit('toast', { message: '结果已复制到剪贴板', type: 'success' })
-      } catch {
-        this.$emit('toast', { message: '复制失败', type: 'error' })
-      }
+      const label = this.activeTab === 'json' ? '解密 JSON 结果' : '解密原始结果'
+      await copyToolOutput(this, text, label)
     },
     clearResult() {
       this.result = null
