@@ -36,6 +36,7 @@ import {
   minifyJson,
   removeJsonSlashes,
 } from '../utils/devTools'
+import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'JsonTool',
@@ -49,13 +50,7 @@ export default {
   },
   methods: {
     applyResult(result) {
-      if (result.ok) {
-        this.output = result.value
-        this.error = ''
-      } else {
-        this.output = ''
-        this.error = result.error
-      }
+      applyToolResult(this, result)
     },
     runFormat() {
       this.applyResult(formatJson(this.input))
@@ -76,13 +71,8 @@ export default {
       this.applyResult(removeJsonSlashes(this.input))
     },
     async copyOutput() {
-      try {
-        await navigator.clipboard.writeText(this.output)
-        this.$emit('toast', { message: '已复制 JSON 输出', type: 'success' })
-      } catch {
-        this.$emit('toast', { message: '复制失败', type: 'error' })
-      }
-    },
+      await copyToolOutput(this, this.output, 'JSON 输出')
+    }
   },
 }
 </script>

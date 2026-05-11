@@ -3,16 +3,16 @@
     <template #header>
       <div class="tool-header">
         <div>
-          <h2>URL</h2>
-          <p>URL encode/decode，并提示 malformed URI。</p>
+          <h2>HTML 实体</h2>
+          <p>转换 HTML named entity 与数字实体。</p>
         </div>
       </div>
     </template>
 
-    <el-input v-model="input" type="textarea" :rows="8" placeholder="请输入 URL 文本" />
+    <el-input v-model="input" type="textarea" :rows="8" placeholder="请输入需要编码或解码的文本" />
     <div class="action-row">
-      <el-button type="primary" @click="runEncode">Encode</el-button>
-      <el-button @click="runDecode">Decode</el-button>
+      <el-button type="primary" @click="runEncode">实体编码</el-button>
+      <el-button @click="runDecode">实体解码</el-button>
       <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
     </div>
 
@@ -24,11 +24,11 @@
 </template>
 
 <script>
-import { decodeUrl, encodeUrl } from '../utils/devTools'
+import { decodeHtmlEntities, encodeHtmlEntities } from '../utils/devTools'
 import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
-  name: 'UrlTool',
+  name: 'HtmlEntityTool',
   emits: ['toast'],
   data() {
     return {
@@ -38,18 +38,15 @@ export default {
     }
   },
   methods: {
-    applyResult(result) {
-      applyToolResult(this, result)
-    },
     runEncode() {
-      this.applyResult(encodeUrl(this.input))
+      applyToolResult(this, encodeHtmlEntities(this.input))
     },
     runDecode() {
-      this.applyResult(decodeUrl(this.input))
+      applyToolResult(this, decodeHtmlEntities(this.input))
     },
     async copyOutput() {
-      await copyToolOutput(this, this.output, 'URL 输出')
-    }
+      await copyToolOutput(this, this.output, 'HTML 实体输出')
+    },
   },
 }
 </script>

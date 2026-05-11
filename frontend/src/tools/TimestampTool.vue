@@ -16,6 +16,7 @@
             <el-input v-model="timestampInput" placeholder="1704067200 或 1704067200000" clearable />
           </el-form-item>
           <el-button type="primary" @click="convertTimestamp">转为日期时间</el-button>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
         </el-form>
       </el-col>
 
@@ -32,6 +33,7 @@
           </el-form-item>
           <el-button type="primary" @click="convertDate">转为 timestamp</el-button>
           <el-button @click="useCurrentTime">当前时间</el-button>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
         </el-form>
       </el-col>
     </el-row>
@@ -45,9 +47,11 @@
 
 <script>
 import { dateToTimestamp, timestampToDate } from '../utils/devTools'
+import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'TimestampTool',
+  emits: ['toast'],
   data() {
     return {
       timestampInput: '',
@@ -58,13 +62,7 @@ export default {
   },
   methods: {
     applyResult(result) {
-      if (result.ok) {
-        this.output = JSON.stringify(result.value, null, 2)
-        this.error = ''
-      } else {
-        this.output = ''
-        this.error = result.error
-      }
+      applyToolResult(this, result, { format: (value) => JSON.stringify(value, null, 2) })
     },
     convertTimestamp() {
       this.applyResult(timestampToDate(this.timestampInput))
@@ -75,6 +73,9 @@ export default {
     useCurrentTime() {
       this.dateInput = new Date()
       this.convertDate()
+    },
+    async copyOutput() {
+      await copyToolOutput(this, this.output, '时间戳输出')
     },
   },
 }

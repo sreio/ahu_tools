@@ -95,12 +95,18 @@ func (a *App) DownloadUpdate(asset DownloadAsset) DownloadUpdateResponse {
 		return DownloadUpdateResponse{Success: false, Cancelled: true, Message: "已取消保存"}
 	}
 
-	if err := downloadFile(asset.URL, path); err != nil {
-		_ = os.Remove(path)
+	downloadPath, err := uniqueDownloadPath(path)
+	if err != nil {
+		return DownloadUpdateResponse{Success: false, Error: "保存路径不可用，请重新选择"}
+	}
+
+	if err := downloadFile(asset.URL, downloadPath); err != nil {
+		_ = os.Remove(downloadPath)
+		_ = os.Remove(downloadPath + ".part")
 		return DownloadUpdateResponse{Success: false, Error: "下载安装包失败，请稍后重试"}
 	}
 
-	return DownloadUpdateResponse{Success: true, Path: path, Message: "下载完成"}
+	return DownloadUpdateResponse{Success: true, Path: downloadPath, Message: "下载完成"}
 }
 
 func (a *App) InstallDownloadedUpdate(path string) InstallUpdateResponse {
@@ -332,6 +338,28 @@ func installUpdateMessage(goos string) string {
 	return "安装程序已启动，应用即将退出"
 }
 
+func uniqueDownloadPath(path string) (string, error) {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return path, nil
+	} else if err != nil {
+		return "", err
+	}
+
+	dir := filepath.Dir(path)
+	extension := filepath.Ext(path)
+	baseName := strings.TrimSuffix(filepath.Base(path), extension)
+	for index := 1; index <= 99; index++ {
+		candidate := filepath.Join(dir, fmt.Sprintf("%s-%d%s", baseName, index, extension))
+		if _, err := os.Stat(candidate); errors.Is(err, os.ErrNotExist) {
+			return candidate, nil
+		} else if err != nil {
+			return "", err
+		}
+	}
+
+	return "", errors.New("no available download path")
+}
+
 func downloadFile(url string, path string) error {
 	client := &http.Client{Timeout: 10 * time.Minute}
 	resp, err := client.Get(url)
@@ -344,12 +372,26 @@ func downloadFile(url string, path string) error {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
-	file, err := os.Create(path)
+	tempPath := path + ".part"
+	_ = os.Remove(tempPath)
+	file, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	_, err = io.Copy(file, resp.Body)
-	return err
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		_ = file.Close()
+		_ = os.Remove(tempPath)
+		return err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+
+	if err := os.Rename(tempPath, path); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	return nil
 }

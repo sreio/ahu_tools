@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,8 +60,8 @@ func TestCompareVersionsRejectsInvalid(t *testing.T) {
 func TestFindPlatformAsset(t *testing.T) {
 	release := githubRelease{
 		Assets: []githubReleaseAsset{
-			{Name: "AhuTools-windows-amd64.exe", BrowserDownloadURL: "https://example.com/win.exe", Size: 10},
-			{Name: "AhuTools-darwin-arm64.dmg", BrowserDownloadURL: "https://example.com/mac.dmg", Size: 20},
+			{Name: "IT工具箱-v1.2.0-windows-amd64.exe", BrowserDownloadURL: "https://example.com/win.exe", Size: 10},
+			{Name: "IT工具箱-v1.2.0-darwin-arm64.dmg", BrowserDownloadURL: "https://example.com/mac.dmg", Size: 20},
 		},
 	}
 
@@ -68,13 +69,13 @@ func TestFindPlatformAsset(t *testing.T) {
 	if !ok {
 		t.Fatal("expected darwin arm64 asset")
 	}
-	if asset.Name != "AhuTools-darwin-arm64.dmg" {
+	if asset.Name != "IT工具箱-v1.2.0-darwin-arm64.dmg" {
 		t.Fatalf("unexpected asset: %s", asset.Name)
 	}
 }
 
 func TestFindPlatformAssetNoMatch(t *testing.T) {
-	release := githubRelease{Assets: []githubReleaseAsset{{Name: "AhuTools-windows-amd64.exe"}}}
+	release := githubRelease{Assets: []githubReleaseAsset{{Name: "IT工具箱-v1.2.0-windows-amd64.exe"}}}
 	_, ok := findPlatformAsset(release, "linux", "amd64")
 	if ok {
 		t.Fatal("expected no matching linux asset")
@@ -96,7 +97,7 @@ func TestCheckForUpdateFromEndpointNewVersion(t *testing.T) {
 			"body":"Release notes",
 			"draft":false,
 			"prerelease":false,
-			"assets":[{"name":"AhuTools-darwin-arm64.dmg","browser_download_url":"https://example.com/AhuTools.dmg","size":1024}]
+			"assets":[{"name":"IT工具箱-v1.2.0-darwin-arm64.dmg","browser_download_url":"https://example.com/AhuTools.dmg","size":1024}]
 		}`))
 	}))
 	defer server.Close()
@@ -111,7 +112,7 @@ func TestCheckForUpdateFromEndpointNewVersion(t *testing.T) {
 	if info.LatestVersion != "1.2.0" {
 		t.Fatalf("expected latest version 1.2.0, got %s", info.LatestVersion)
 	}
-	if info.Asset == nil || info.Asset.Name != "AhuTools-darwin-arm64.dmg" {
+	if info.Asset == nil || info.Asset.Name != "IT工具箱-v1.2.0-darwin-arm64.dmg" {
 		t.Fatalf("expected matched asset, got %#v", info.Asset)
 	}
 }
@@ -142,7 +143,7 @@ func TestCheckForUpdateFromEndpointNoMatchingAsset(t *testing.T) {
 			"tag_name":"v1.2.0",
 			"draft":false,
 			"prerelease":false,
-			"assets":[{"name":"AhuTools-windows-amd64.exe","browser_download_url":"https://example.com/win.exe","size":1024}]
+			"assets":[{"name":"IT工具箱-v1.2.0-windows-amd64.exe","browser_download_url":"https://example.com/win.exe","size":1024}]
 		}`))
 	}))
 	defer server.Close()
@@ -204,6 +205,45 @@ func TestCheckForUpdateFromEndpointInvalidJSON(t *testing.T) {
 	}
 	if info.Error != "Release 信息解析失败，请稍后重试" {
 		t.Fatalf("unexpected error: %s", info.Error)
+	}
+}
+
+func TestUniqueDownloadPathAvoidsOverwritingExistingPackage(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "IT工具箱-v1.2.0-windows-amd64.exe")
+	if err := os.WriteFile(path, []byte("old"), 0o600); err != nil {
+		t.Fatalf("write existing package: %v", err)
+	}
+
+	got, err := uniqueDownloadPath(path)
+	if err != nil {
+		t.Fatalf("uniqueDownloadPath returned error: %v", err)
+	}
+	want := filepath.Join(dir, "IT工具箱-v1.2.0-windows-amd64-1.exe")
+	if got != want {
+		t.Fatalf("uniqueDownloadPath() = %q, want %q", got, want)
+	}
+}
+
+func TestDownloadFileUsesPartFileThenRenames(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("installer"))
+	}))
+	defer server.Close()
+
+	path := filepath.Join(t.TempDir(), "IT工具箱-v1.2.0-windows-amd64.exe")
+	if err := downloadFile(server.URL, path); err != nil {
+		t.Fatalf("downloadFile returned error: %v", err)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read downloaded file: %v", err)
+	}
+	if string(content) != "installer" {
+		t.Fatalf("downloaded content = %q", string(content))
+	}
+	if _, err := os.Stat(path + ".part"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected part file to be removed, stat err: %v", err)
 	}
 }
 

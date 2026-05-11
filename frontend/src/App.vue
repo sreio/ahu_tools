@@ -95,7 +95,7 @@ export default {
       tools: [...defaultTools],
       activeTool: 'decrypt',
       appName: 'IT工具箱',
-      version: '1.1.6',
+      version: '1.1.7',
       author: 'sreio',
       configs: [],
       showSettings: false,

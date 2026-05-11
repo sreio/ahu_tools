@@ -25,6 +25,7 @@
 
 <script>
 import { decodeBase64, encodeBase64 } from '../utils/devTools'
+import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'Base64Tool',
@@ -38,13 +39,7 @@ export default {
   },
   methods: {
     applyResult(result) {
-      if (result.ok) {
-        this.output = result.value
-        this.error = ''
-      } else {
-        this.output = ''
-        this.error = result.error
-      }
+      applyToolResult(this, result)
     },
     runEncode() {
       this.applyResult(encodeBase64(this.input))
@@ -53,13 +48,8 @@ export default {
       this.applyResult(decodeBase64(this.input))
     },
     async copyOutput() {
-      try {
-        await navigator.clipboard.writeText(this.output)
-        this.$emit('toast', { message: '已复制 Base64 输出', type: 'success' })
-      } catch {
-        this.$emit('toast', { message: '复制失败', type: 'error' })
-      }
-    },
+      await copyToolOutput(this, this.output, 'Base64 输出')
+    }
   },
 }
 </script>

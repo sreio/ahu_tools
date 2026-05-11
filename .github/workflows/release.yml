@@ -19,15 +19,15 @@ jobs:
           - name: Windows AMD64
             platform: windows/amd64
             os: windows-latest
-            artifact-name: AhuTools-windows-amd64.exe
+            artifact-suffix: windows-amd64.exe
           - name: macOS AMD64
             platform: darwin/amd64
             os: macos-latest
-            artifact-name: AhuTools-darwin-amd64.dmg
+            artifact-suffix: darwin-amd64.dmg
           - name: macOS ARM64
             platform: darwin/arm64
             os: macos-latest
-            artifact-name: AhuTools-darwin-arm64.dmg
+            artifact-suffix: darwin-arm64.dmg
 
     steps:
       - name: Checkout
@@ -69,7 +69,7 @@ jobs:
           wails build -platform ${{ matrix.platform }} -nsis
           $installer = Get-ChildItem -Path build/bin -Recurse -Filter "*.exe" | Select-Object -First 1
           if (-not $installer) { throw "Windows installer not found" }
-          Copy-Item $installer.FullName "${{ matrix.artifact-name }}"
+          Copy-Item $installer.FullName "IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}"
 
       - name: Build macOS app
         if: runner.os == 'macOS'
@@ -83,19 +83,19 @@ jobs:
           codesign --force --deep --sign - "$APP_PATH"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           create-dmg \
-            --volname "AhuTools" \
+            --volname "IT工具箱" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
             --app-drop-link 450 185 \
-            "${{ matrix.artifact-name }}" \
+            "IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}" \
             "$APP_PATH"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.artifact-name }}
+          name: IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}
+          path: IT工具箱-${{ github.ref_name }}-${{ matrix.artifact-suffix }}
           if-no-files-found: error
 
   release:

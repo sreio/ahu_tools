@@ -37,6 +37,7 @@
 
 <script>
 import { hashText } from '../utils/devTools'
+import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'HashTool',
@@ -52,22 +53,11 @@ export default {
   methods: {
     async runHash() {
       const result = await hashText(this.input, this.algorithm)
-      if (result.ok) {
-        this.output = result.value
-        this.error = ''
-      } else {
-        this.output = ''
-        this.error = result.error
-      }
+      applyToolResult(this, result)
     },
     async copyOutput() {
-      try {
-        await navigator.clipboard.writeText(this.output)
-        this.$emit('toast', { message: '已复制 Hash 输出', type: 'success' })
-      } catch {
-        this.$emit('toast', { message: '复制失败', type: 'error' })
-      }
-    },
+      await copyToolOutput(this, this.output, 'Hash 输出')
+    }
   },
 }
 </script>

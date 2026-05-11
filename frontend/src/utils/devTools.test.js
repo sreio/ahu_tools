@@ -2,17 +2,26 @@ import { describe, expect, it } from 'vitest'
 import {
   addJsonSlashes,
   dateToTimestamp,
+  buildUrlQuery,
   decodeBase64,
   decodeChineseUnicode,
+  decodeHtmlEntities,
   decodeJwt,
   decodeUrl,
   encodeBase64,
   encodeChineseUnicode,
+  encodeHtmlEntities,
   encodeUrl,
   formatJson,
+  generateRandomBase62,
+  generateRandomHex,
+  generateRandomStrings,
+  generateUuidV4,
   hashText,
   minifyJson,
+  parseUrlQuery,
   removeJsonSlashes,
+  testRegex,
   timestampToDate,
 } from './devTools'
 
@@ -123,6 +132,105 @@ describe('devTools utilities', () => {
         iso: '2024-01-01T00:00:00.000Z',
         local: expect.any(String),
       },
+    })
+  })
+
+  it('generates UUID and random strings using Web Crypto', () => {
+    const uuid = generateUuidV4()
+    expect(uuid.ok).toBe(true)
+    expect(uuid.value).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+
+    const hex = generateRandomHex(16)
+    expect(hex.ok).toBe(true)
+    expect(hex.value).toMatch(/^[0-9a-f]{16}$/)
+
+    const base62 = generateRandomBase62(16)
+    expect(base62.ok).toBe(true)
+    expect(base62.value).toMatch(/^[0-9A-Za-z]{16}$/)
+
+    const values = generateRandomStrings({ mode: 'hex', length: 8, count: 3 })
+    expect(values.ok).toBe(true)
+    expect(values.value).toHaveLength(3)
+    expect(values.value.every((item) => /^[0-9a-f]{8}$/.test(item))).toBe(true)
+  })
+
+  it('rejects random string limits outside allowed ranges', () => {
+    expect(generateRandomHex(0)).toEqual({ ok: false, error: '长度 必须是 1..512 的整数' })
+    expect(generateRandomStrings({ mode: 'base62', length: 8, count: 101 })).toEqual({
+      ok: false,
+      error: '数量 必须是 1..100 的整数',
+    })
+  })
+
+  it('parses full URL query strings preserving duplicates and hash', () => {
+    expect(parseUrlQuery('https://example.com/path?a=1&a=中文&empty=&encoded=%E4%BD%A0#top')).toEqual({
+      ok: true,
+      value: {
+        baseUrl: 'https://example.com/path',
+        hash: '#top',
+        rows: [
+          { key: 'a', value: '1' },
+          { key: 'a', value: '中文' },
+          { key: 'empty', value: '' },
+          { key: 'encoded', value: '你' },
+        ],
+      },
+    })
+  })
+
+  it('parses full URLs without query as empty parameter lists', () => {
+    expect(parseUrlQuery('https://example.com/path#top')).toEqual({
+      ok: true,
+      value: {
+        baseUrl: 'https://example.com/path',
+        hash: '#top',
+        rows: [],
+      },
+    })
+  })
+
+  it('builds query strings and can sort by key', () => {
+    const rows = [
+      { key: 'b', value: '2' },
+      { key: 'a', value: '中文' },
+      { key: 'a', value: '1' },
+    ]
+    expect(buildUrlQuery(rows, { baseUrl: 'https://example.com', hash: '#top', sort: true })).toEqual({
+      ok: true,
+      value: 'https://example.com?a=%E4%B8%AD%E6%96%87&a=1&b=2#top',
+    })
+  })
+
+  it('tests regular expressions and avoids zero-width global loops', () => {
+    expect(testRegex({ pattern: '(?<word>\\w+)', flags: 'g', text: 'one two' })).toEqual({
+      ok: true,
+      value: {
+        pattern: '(?<word>\\w+)',
+        flags: 'g',
+        count: 2,
+        matches: [
+          { match: 'one', index: 0, groups: ['one'], namedGroups: { word: 'one' } },
+          { match: 'two', index: 4, groups: ['two'], namedGroups: { word: 'two' } },
+        ],
+      },
+    })
+
+    const zeroWidth = testRegex({ pattern: '^|$', flags: 'g', text: 'abc' })
+    expect(zeroWidth.ok).toBe(true)
+    expect(zeroWidth.value.count).toBe(2)
+  })
+
+  it('rejects duplicate and invalid regular expression flags', () => {
+    expect(testRegex({ pattern: '.', flags: 'gg', text: 'a' })).toEqual({ ok: false, error: '重复正则 flag: g' })
+    expect(testRegex({ pattern: '.', flags: 'z', text: 'a' })).toEqual({ ok: false, error: '无效正则 flag: z' })
+  })
+
+  it('encodes and decodes HTML entities', () => {
+    const encoded = encodeHtmlEntities('&<>"\'')
+    expect(encoded).toEqual({ ok: true, value: '&amp;&lt;&gt;&quot;&#39;' })
+    expect(decodeHtmlEntities(`${encoded.value} &#x4F60; &#20320; &#xD800; &unknown;`)).toEqual({
+      ok: true,
+      value: '&<>"\' 你 你 &#xD800; &unknown;',
     })
   })
 

@@ -473,6 +473,25 @@ body {
   width: 100%;
 }
 
+.query-row-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.query-row-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .query-row-item {
+    grid-template-columns: 1fr;
+  }
+}
+
 .config-list {
   display: grid;
   gap: 16px;

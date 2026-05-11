@@ -25,7 +25,7 @@
           <el-menu-item v-for="tool in group.tools" :key="tool.key" :index="tool.key">
             <el-tooltip :disabled="!collapsed" :content="tool.name" placement="right">
               <div class="nav-item-content">
-                <span>{{ collapsed ? tool.name.slice(0, 1) : tool.name }}</span>
+                <span>{{ collapsed ? (tool.shortName || tool.name.slice(0, 1)) : tool.name }}</span>
                 <small v-if="!collapsed">{{ tool.description }}</small>
               </div>
             </el-tooltip>
