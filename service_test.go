@@ -182,6 +182,22 @@ func TestH5DecryptConfigPersistsSeparatelyFromLegacyConfigs(t *testing.T) {
 	}
 }
 
+func TestSaveConfigTrimsEnvironmentAndKey(t *testing.T) {
+	service := newTestDecryptService(t)
+
+	if err := service.SaveConfig(Config{Environment: " custom ", Key: " 1234567890123456 ", Description: "自定义环境"}); err != nil {
+		t.Fatalf("save config with padded whitespace: %v", err)
+	}
+
+	got, err := service.GetConfig("custom")
+	if err != nil {
+		t.Fatalf("get trimmed config: %v", err)
+	}
+	if got.Key != legacyTestKey {
+		t.Fatalf("saved key was not trimmed")
+	}
+}
+
 func TestSaveH5DecryptConfigValidatesAESKeyAndIV(t *testing.T) {
 	service := newTestDecryptService(t)
 
@@ -211,6 +227,31 @@ func TestSaveH5DecryptConfigValidatesAESKeyAndIV(t *testing.T) {
 	}
 	if err := service.SaveConfig(Config{Environment: "legacy", Key: "12345678901234567890123456789012"}); err == nil {
 		t.Fatalf("expected legacy config to keep 16-byte key validation")
+	}
+}
+
+func TestSaveH5DecryptConfigTrimsAESKeyAndIV(t *testing.T) {
+	service := newTestDecryptService(t)
+
+	if err := service.SaveH5DecryptConfig(H5DecryptConfig{
+		Environment:          " test ",
+		RequestAES256CBCIV:   " abcdefghijklmnop ",
+		RequestAES256CBCKey:  " 12345678901234567890123456789012 ",
+		ResponseAES256CBCIV:  " ponmlkjihgfedcba ",
+		ResponseAES256CBCKey: " abcdefghijklmnopabcdefghijklmnop ",
+	}); err != nil {
+		t.Fatalf("save h5 config with padded whitespace: %v", err)
+	}
+
+	got, err := service.GetH5DecryptConfig("test")
+	if err != nil {
+		t.Fatalf("get h5 config: %v", err)
+	}
+	if got.RequestAES256CBCIV != "abcdefghijklmnop" || got.RequestAES256CBCKey != "12345678901234567890123456789012" {
+		t.Fatalf("request AES values were not trimmed")
+	}
+	if got.ResponseAES256CBCIV != "ponmlkjihgfedcba" || got.ResponseAES256CBCKey != "abcdefghijklmnopabcdefghijklmnop" {
+		t.Fatalf("response AES values were not trimmed")
 	}
 }
 

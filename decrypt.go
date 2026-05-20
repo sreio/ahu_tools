@@ -27,6 +27,9 @@ type DecryptResponse struct {
 }
 
 func (a *App) Decrypt(req DecryptRequest) DecryptResponse {
+	if a.service == nil {
+		return DecryptResponse{Success: false, Error: "配置服务未初始化"}
+	}
 	if req.Environment == "" || req.Data == "" {
 		return DecryptResponse{
 			Success: false,
@@ -104,6 +107,9 @@ func decrypt(encryptedData, key string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Base64解码失败: %v", err)
 	}
+	if len(decoded) == 0 || len(decoded)%aes.BlockSize != 0 {
+		return "", errors.New("密文长度不是 AES block size 的倍数")
+	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 	plaintext := make([]byte, len(decoded))
@@ -128,8 +134,13 @@ func pkcs7Unpad(data []byte) ([]byte, error) {
 		return nil, errors.New("数据为空")
 	}
 	padding := int(data[length-1])
-	if padding > length || padding > aes.BlockSize {
+	if padding == 0 || padding > length || padding > aes.BlockSize {
 		return nil, errors.New("无效的padding")
+	}
+	for index := length - padding; index < length; index++ {
+		if int(data[index]) != padding {
+			return nil, errors.New("无效的padding")
+		}
 	}
 	return data[:length-padding], nil
 }

@@ -1,15 +1,15 @@
 export namespace main {
-
+	
 	export class Config {
 	    id: number;
 	    environment: string;
 	    key: string;
 	    description: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -21,11 +21,11 @@ export namespace main {
 	export class DecryptRequest {
 	    environment: string;
 	    data: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DecryptRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.environment = source["environment"];
@@ -39,11 +39,11 @@ export namespace main {
 	    isJson: boolean;
 	    environment: string;
 	    error?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DecryptResponse(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -58,11 +58,11 @@ export namespace main {
 	    name: string;
 	    url: string;
 	    size: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DownloadAsset(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -76,11 +76,11 @@ export namespace main {
 	    path?: string;
 	    message?: string;
 	    error?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DownloadUpdateResponse(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -100,11 +100,11 @@ export namespace main {
 	    response_aes_256_cbc_iv: string;
 	    response_aes_256_cbc_key: string;
 	    client_rsa_private_key: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new H5DecryptConfig(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -122,11 +122,11 @@ export namespace main {
 	    environment: string;
 	    mode: string;
 	    data: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new H5DecryptRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.environment = source["environment"];
@@ -141,11 +141,11 @@ export namespace main {
 	    isJson: boolean;
 	    mode?: string;
 	    error?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new H5DecryptResponse(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -160,11 +160,11 @@ export namespace main {
 	    success: boolean;
 	    message?: string;
 	    error?: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new InstallUpdateResponse(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -182,11 +182,11 @@ export namespace main {
 	    schemaVersion: number;
 	    // Go type: time
 	    createdAt: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new ToolHistory(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -198,7 +198,7 @@ export namespace main {
 	        this.schemaVersion = source["schemaVersion"];
 	        this.createdAt = this.convertValues(source["createdAt"], null);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -231,11 +231,11 @@ export namespace main {
 	    message?: string;
 	    error?: string;
 	    platformHasAsset: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -252,7 +252,7 @@ export namespace main {
 	        this.error = source["error"];
 	        this.platformHasAsset = source["platformHasAsset"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;

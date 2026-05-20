@@ -2,12 +2,12 @@
 
 # AhuTools 构建脚本
 # 作者: sreio
-# 版本: 1.0.0
+# 版本: 1.1.9
 
 set -e
 
 APP_NAME="AhuTools"
-VERSION="1.0.0"
+VERSION="1.1.9"
 
 echo "================================"
 echo "  $APP_NAME v$VERSION"
@@ -26,6 +26,12 @@ fi
 echo "📦 安装依赖..."
 go mod download
 cd frontend && npm install && cd ..
+
+# 运行测试
+echo ""
+echo "🧪 运行测试..."
+go test ./...
+npm run test --prefix frontend
 
 # 构建所有平台
 echo ""

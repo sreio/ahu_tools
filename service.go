@@ -158,6 +158,8 @@ func (s *DecryptService) GetAllConfigs() ([]Config, error) {
 }
 
 func (s *DecryptService) SaveConfig(config Config) error {
+	config.Environment = strings.TrimSpace(config.Environment)
+	config.Key = strings.TrimSpace(config.Key)
 	if config.Environment == "" {
 		return errors.New("环境名称不能为空")
 	}
@@ -297,6 +299,17 @@ func (s *DecryptService) GetAllH5DecryptConfigs() ([]H5DecryptConfig, error) {
 	return configs, nil
 }
 
+func normalizeH5DecryptConfig(config H5DecryptConfig) H5DecryptConfig {
+	config.Environment = strings.TrimSpace(config.Environment)
+	config.RequestAES256CBCIV = strings.TrimSpace(config.RequestAES256CBCIV)
+	config.RequestAES256CBCKey = strings.TrimSpace(config.RequestAES256CBCKey)
+	config.ServerRSAPrivateKey = strings.TrimSpace(config.ServerRSAPrivateKey)
+	config.ResponseAES256CBCIV = strings.TrimSpace(config.ResponseAES256CBCIV)
+	config.ResponseAES256CBCKey = strings.TrimSpace(config.ResponseAES256CBCKey)
+	config.ClientRSAPrivateKey = strings.TrimSpace(config.ClientRSAPrivateKey)
+	return config
+}
+
 func (s *DecryptService) GetH5DecryptConfig(environment string) (*H5DecryptConfig, error) {
 	var config H5DecryptConfig
 	result := s.db.Where("environment = ?", environment).First(&config)
@@ -310,7 +323,7 @@ func (s *DecryptService) GetH5DecryptConfig(environment string) (*H5DecryptConfi
 }
 
 func (s *DecryptService) SaveH5DecryptConfig(config H5DecryptConfig) error {
-	config.Environment = strings.TrimSpace(config.Environment)
+	config = normalizeH5DecryptConfig(config)
 	if config.Environment == "" {
 		return errors.New("H5环境标识不能为空")
 	}

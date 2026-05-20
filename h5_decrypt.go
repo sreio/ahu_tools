@@ -110,13 +110,15 @@ func decryptH5RawEncryptData(encryptData string, config H5DecryptConfig, mode st
 }
 
 func selectH5PrivateKey(config H5DecryptConfig, mode string) (string, string) {
+	config = normalizeH5DecryptConfig(config)
 	if mode == "response" {
-		return strings.TrimSpace(config.ClientRSAPrivateKey), "CLIENT_RSA_PRIVATE_KEY"
+		return config.ClientRSAPrivateKey, "CLIENT_RSA_PRIVATE_KEY"
 	}
-	return strings.TrimSpace(config.ServerRSAPrivateKey), "SERVER_RSA_PRIVATE_KEY"
+	return config.ServerRSAPrivateKey, "SERVER_RSA_PRIVATE_KEY"
 }
 
 func selectH5AESConfig(config H5DecryptConfig, mode string) (string, string, string) {
+	config = normalizeH5DecryptConfig(config)
 	if mode == "response" {
 		return config.ResponseAES256CBCKey, config.ResponseAES256CBCIV, "响应 AES_256_CBC_KEY"
 	}

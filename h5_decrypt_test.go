@@ -182,6 +182,22 @@ func TestH5DecryptRawModeUsesConfiguredFallbackIV(t *testing.T) {
 	}
 }
 
+func TestH5DecryptRawModeTrimsConfiguredAESKeyAndIV(t *testing.T) {
+	encryptData := buildH5EncryptedData(t, `trimmed config`, h5TestAESKey, h5TestIV, false)
+
+	decrypted, err := decryptH5RawEncryptData(encryptData, H5DecryptConfig{
+		RequestAES256CBCIV:  " " + h5TestIV + " ",
+		RequestAES256CBCKey: " " + h5TestAESKey + " ",
+	}, "request")
+
+	if err != nil {
+		t.Fatalf("decrypt with whitespace padded config: %v", err)
+	}
+	if decrypted != "trimmed config" {
+		t.Fatalf("decrypted = %q, want trimmed config", decrypted)
+	}
+}
+
 func TestH5DecryptPayloadModeRequiresModePrivateKey(t *testing.T) {
 	app := newTestAppWithService(t)
 	privateKey, _ := generateH5TestKeys(t)

@@ -18,6 +18,7 @@ import {
   generateRandomHex,
   generateRandomStrings,
   generateUuidV4,
+  getUtf8ByteLength,
   hashText,
   minifyJson,
   parseUrlQuery,
@@ -28,6 +29,11 @@ import {
 } from './devTools'
 
 describe('devTools utilities', () => {
+  it('counts UTF-8 bytes instead of UTF-16 code units', () => {
+    expect(getUtf8ByteLength('1234567890123456')).toBe(16)
+    expect(getUtf8ByteLength('中文')).toBe(6)
+  })
+
   it('formats valid JSON', () => {
     expect(formatJson('{"name":"AhuTools","ok":true}')).toEqual({
       ok: true,

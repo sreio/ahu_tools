@@ -1,7 +1,7 @@
-.PHONY: build build-windows build-darwin build-linux clean install dev
+.PHONY: build build-windows build-darwin build-linux clean install dev test verify
 
 APP_NAME=AhuTools
-VERSION=1.0.0
+VERSION=1.1.9
 AUTHOR=sreio
 
 # 默认构建
@@ -16,6 +16,15 @@ install:
 # 开发模式
 dev:
 	wails dev
+
+# 运行测试
+test:
+	go test ./...
+	npm run test --prefix frontend
+
+# 完整验证
+verify: test
+	npm run build --prefix frontend
 
 # Windows构建
 build-windows:
@@ -57,6 +66,8 @@ help:
 	@echo "Usage:"
 	@echo "  make install          - Install dependencies"
 	@echo "  make dev              - Run in development mode"
+	@echo "  make test             - Run Go and frontend tests"
+	@echo "  make verify           - Run tests and frontend build"
 	@echo "  make build            - Build for all platforms"
 	@echo "  make build-windows    - Build for Windows (AMD64 & ARM64)"
 	@echo "  make build-darwin     - Build for macOS (AMD64 & ARM64)"

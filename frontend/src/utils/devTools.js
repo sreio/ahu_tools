@@ -1,6 +1,10 @@
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder('utf-8', { fatal: true })
 
+export function getUtf8ByteLength(value) {
+  return textEncoder.encode(value).length
+}
+
 function success(value) {
   return { ok: true, value }
 }

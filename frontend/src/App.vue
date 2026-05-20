@@ -133,6 +133,22 @@ import {
 import { tools as defaultTools } from './tools'
 import { applySavedToolOrder, normalizeToolOrder } from './tools/order'
 import UpdateTool from './tools/UpdateTool.vue'
+import { getUtf8ByteLength } from './utils/devTools'
+
+const h5ConfigByteLengthRules = [
+  { field: 'request_aes_256_cbc_iv', bytes: 16, message: '请求 AES_256_CBC_IV 必须为16字节' },
+  { field: 'request_aes_256_cbc_key', bytes: 32, message: '请求 AES_256_CBC_KEY 必须为32字节' },
+  { field: 'response_aes_256_cbc_iv', bytes: 16, message: '响应 AES_256_CBC_IV 必须为16字节' },
+  { field: 'response_aes_256_cbc_key', bytes: 32, message: '响应 AES_256_CBC_KEY 必须为32字节' },
+]
+
+function trimValue(value) {
+  return value?.trim() || ''
+}
+
+function getFirstByteLengthError(config, rules) {
+  return rules.find(({ field, bytes }) => config[field] && getUtf8ByteLength(config[field]) !== bytes)?.message
+}
 
 export default {
   name: 'App',
@@ -344,17 +360,22 @@ export default {
       }
     },
     async saveConfig(config) {
-      if (!config.environment) {
+      const normalizedConfig = {
+        ...config,
+        environment: trimValue(config.environment),
+        key: trimValue(config.key),
+      }
+      if (!normalizedConfig.environment) {
         this.showToast({ message: '请输入环境标识', type: 'error' })
         return
       }
-      if (config.key.length !== 16 && config.key !== '') {
+      if (normalizedConfig.key !== '' && getUtf8ByteLength(normalizedConfig.key) !== 16) {
         this.showToast({ message: '密钥长度必须为16字节', type: 'error' })
         return
       }
 
       try {
-        await SaveConfig(config)
+        await SaveConfig(normalizedConfig)
         this.showToast({ message: '配置保存成功', type: 'success' })
         await this.loadConfigs()
       } catch {
@@ -362,29 +383,28 @@ export default {
       }
     },
     async saveH5Config(config) {
-      if (!config.environment) {
+      const normalizedConfig = {
+        ...config,
+        environment: trimValue(config.environment),
+        request_aes_256_cbc_iv: trimValue(config.request_aes_256_cbc_iv),
+        request_aes_256_cbc_key: trimValue(config.request_aes_256_cbc_key),
+        server_rsa_private_key: trimValue(config.server_rsa_private_key),
+        response_aes_256_cbc_iv: trimValue(config.response_aes_256_cbc_iv),
+        response_aes_256_cbc_key: trimValue(config.response_aes_256_cbc_key),
+        client_rsa_private_key: trimValue(config.client_rsa_private_key),
+      }
+      if (!normalizedConfig.environment) {
         this.showToast({ message: '请输入 H5 环境标识', type: 'error' })
         return
       }
-      if (config.request_aes_256_cbc_iv && config.request_aes_256_cbc_iv.length !== 16) {
-        this.showToast({ message: '请求 AES_256_CBC_IV 必须为16字节', type: 'error' })
-        return
-      }
-      if (config.request_aes_256_cbc_key && config.request_aes_256_cbc_key.length !== 32) {
-        this.showToast({ message: '请求 AES_256_CBC_KEY 必须为32字节', type: 'error' })
-        return
-      }
-      if (config.response_aes_256_cbc_iv && config.response_aes_256_cbc_iv.length !== 16) {
-        this.showToast({ message: '响应 AES_256_CBC_IV 必须为16字节', type: 'error' })
-        return
-      }
-      if (config.response_aes_256_cbc_key && config.response_aes_256_cbc_key.length !== 32) {
-        this.showToast({ message: '响应 AES_256_CBC_KEY 必须为32字节', type: 'error' })
+      const byteLengthError = getFirstByteLengthError(normalizedConfig, h5ConfigByteLengthRules)
+      if (byteLengthError) {
+        this.showToast({ message: byteLengthError, type: 'error' })
         return
       }
 
       try {
-        await SaveH5DecryptConfig(config)
+        await SaveH5DecryptConfig(normalizedConfig)
         this.showToast({ message: 'H5 配置保存成功', type: 'success' })
         await this.loadH5Config()
       } catch (error) {

@@ -80,7 +80,7 @@ func (a *App) DownloadUpdate(asset DownloadAsset) DownloadUpdateResponse {
 	if a.ctx == nil {
 		return DownloadUpdateResponse{Success: false, Error: "应用尚未初始化完成，请稍后重试"}
 	}
-	if strings.TrimSpace(asset.Name) == "" || strings.TrimSpace(asset.URL) == "" {
+	if strings.TrimSpace(asset.Name) == "" || strings.TrimSpace(asset.URL) == "" || asset.Size <= 0 {
 		return DownloadUpdateResponse{Success: false, Error: "下载资源信息不完整，请重新检查更新"}
 	}
 
@@ -100,7 +100,7 @@ func (a *App) DownloadUpdate(asset DownloadAsset) DownloadUpdateResponse {
 		return DownloadUpdateResponse{Success: false, Error: "保存路径不可用，请重新选择"}
 	}
 
-	if err := downloadFile(asset.URL, downloadPath); err != nil {
+	if err := downloadFile(asset.URL, downloadPath, asset.Size); err != nil {
 		_ = os.Remove(downloadPath)
 		_ = os.Remove(downloadPath + ".part")
 		return DownloadUpdateResponse{Success: false, Error: "下载安装包失败，请稍后重试"}
@@ -360,7 +360,7 @@ func uniqueDownloadPath(path string) (string, error) {
 	return "", errors.New("no available download path")
 }
 
-func downloadFile(url string, path string) error {
+func downloadFile(url string, path string, expectedSize int64) error {
 	client := &http.Client{Timeout: 10 * time.Minute}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -371,6 +371,9 @@ func downloadFile(url string, path string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
+	if expectedSize > 0 && resp.ContentLength > 0 && resp.ContentLength != expectedSize {
+		return fmt.Errorf("download size mismatch: got %d, want %d", resp.ContentLength, expectedSize)
+	}
 
 	tempPath := path + ".part"
 	_ = os.Remove(tempPath)
@@ -379,7 +382,12 @@ func downloadFile(url string, path string) error {
 		return err
 	}
 
-	if _, err := io.Copy(file, resp.Body); err != nil {
+	reader := resp.Body
+	if expectedSize > 0 {
+		reader = io.NopCloser(io.LimitReader(resp.Body, expectedSize+1))
+	}
+	written, err := io.Copy(file, reader)
+	if err != nil {
 		_ = file.Close()
 		_ = os.Remove(tempPath)
 		return err
@@ -387,6 +395,10 @@ func downloadFile(url string, path string) error {
 	if err := file.Close(); err != nil {
 		_ = os.Remove(tempPath)
 		return err
+	}
+	if expectedSize > 0 && written != expectedSize {
+		_ = os.Remove(tempPath)
+		return fmt.Errorf("download size mismatch: got %d, want %d", written, expectedSize)
 	}
 
 	if err := os.Rename(tempPath, path); err != nil {

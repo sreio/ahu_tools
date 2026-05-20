@@ -232,7 +232,7 @@ func TestDownloadFileUsesPartFileThenRenames(t *testing.T) {
 	defer server.Close()
 
 	path := filepath.Join(t.TempDir(), "IT工具箱-v1.2.0-windows-amd64.exe")
-	if err := downloadFile(server.URL, path); err != nil {
+	if err := downloadFile(server.URL, path, int64(len("installer"))); err != nil {
 		t.Fatalf("downloadFile returned error: %v", err)
 	}
 	content, err := os.ReadFile(path)
@@ -244,6 +244,26 @@ func TestDownloadFileUsesPartFileThenRenames(t *testing.T) {
 	}
 	if _, err := os.Stat(path + ".part"); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected part file to be removed, stat err: %v", err)
+	}
+}
+
+func TestDownloadFileRejectsSizeMismatchAndRemovesTempFile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("short"))
+	}))
+	defer server.Close()
+
+	path := filepath.Join(t.TempDir(), "IT工具箱-v1.2.0-windows-amd64.exe")
+	err := downloadFile(server.URL, path, 99)
+
+	if err == nil || !strings.Contains(err.Error(), "download size mismatch") {
+		t.Fatalf("err = %v, want size mismatch error", err)
+	}
+	if _, statErr := os.Stat(path); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("expected final file to be absent, stat err: %v", statErr)
+	}
+	if _, statErr := os.Stat(path + ".part"); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("expected part file to be removed, stat err: %v", statErr)
 	}
 }
 
