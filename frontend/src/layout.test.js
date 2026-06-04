@@ -86,4 +86,25 @@ describe('application layout', () => {
       expect(source).not.toContain('<el-card class="tool-card"')
     }
   })
+
+  it('keeps jwt actions scoped to the active mode', () => {
+    const jwt = readFileSync(resolve(__dirname, 'tools/JwtTool.vue'), 'utf8')
+
+    expect(jwt).toContain('<ToolWorkspace>')
+    expect(jwt).toContain('解密 / 验签')
+    expect(jwt).toContain('加密 / 签名')
+    expect(jwt).toContain('<ToolPanel title="输入"')
+    expect(jwt).toContain('<ToolPanel title="结果"')
+    expect(jwt).not.toContain('<el-card class="tool-card"')
+  })
+
+  it('keeps query row actions inline while panel actions stay global', () => {
+    const query = readFileSync(resolve(__dirname, 'tools/QueryTool.vue'), 'utf8')
+
+    expect(query).toContain('<ToolWorkspace>')
+    expect(query).toContain('<ToolPanel title="输入"')
+    expect(query).toContain('<ToolPanel title="输出"')
+    expect(query).toContain('@click="removeRow(index)"')
+    expect(query).not.toContain('<el-card class="tool-card"')
+  })
 })

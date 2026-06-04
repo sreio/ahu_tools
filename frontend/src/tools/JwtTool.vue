@@ -1,48 +1,73 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>JWT</h2>
-          <p>解码、验签与 HMAC 签名生成。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'jwt')">历史</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="解码、验签与 HMAC 签名生成。">
+        <template #actions>
+          <template v-if="activeTab === 'decode'">
+            <el-button type="primary" @click="runDecode">解密 Token</el-button>
+            <el-button type="success" @click="runVerify">验签</el-button>
+            <el-button @click="clearDecode">清空</el-button>
+            <el-button :disabled="!input.trim()" @click="copyText(input, 'JWT Token')">复制 Token</el-button>
+          </template>
+          <template v-else>
+            <el-button type="primary" @click="runSign">生成 Token</el-button>
+            <el-button :disabled="!outputToken" @click="copyText(outputToken, 'JWT Token')">复制 Token</el-button>
+            <el-button @click="clearSign">清空</el-button>
+          </template>
+        </template>
+
+        <el-alert
+          title="这里的“加密/解密”按 JWT 常用工具语义实现为签名生成、解码与验签；不支持 JWE 加密/解密。"
+          type="info"
+          show-icon
+          :closable="false"
+          class="tool-feedback"
+        />
+
+        <el-tabs v-model="activeTab">
+          <el-tab-pane label="解密 / 验签" name="decode">
+            <el-form label-position="top" class="tool-section">
+              <el-form-item label="JWT Token" class="tool-fill-input">
+                <el-input v-model="input" type="textarea" placeholder="请输入 header.payload.signature" />
+              </el-form-item>
+              <el-form-item label="Secret">
+                <el-input v-model="secret" type="password" show-password placeholder="验签时输入 HMAC secret" />
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="加密 / 签名" name="sign">
+            <el-form label-position="top" class="tool-section">
+              <el-form-item label="Algorithm">
+                <el-select v-model="signAlgorithm" class="full-width">
+                  <el-option label="HS256" value="HS256" />
+                  <el-option label="HS384" value="HS384" />
+                  <el-option label="HS512" value="HS512" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Header JSON">
+                <el-input v-model="signHeader" type="textarea" :rows="5" />
+              </el-form-item>
+              <el-form-item label="Payload JSON">
+                <el-input v-model="signPayload" type="textarea" :rows="7" />
+              </el-form-item>
+              <el-form-item label="Secret">
+                <el-input v-model="signSecret" type="password" show-password placeholder="请输入 HMAC secret" />
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
+        </el-tabs>
+      </ToolPanel>
     </template>
 
-    <el-alert
-      title="这里的“加密/解密”按 JWT 常用工具语义实现为签名生成、解码与验签；不支持 JWE 加密/解密。"
-      type="info"
-      show-icon
-      :closable="false"
-      class="tool-feedback"
-    />
+    <template #result>
+      <ToolPanel title="结果" :description="activeTab === 'decode' ? 'Header、Payload、Signature 与验签状态。' : '签名生成后的 JWT Token。'">
+        <el-alert v-if="decodeError && activeTab === 'decode'" :title="decodeError" type="error" show-icon class="tool-feedback" />
+        <el-alert v-if="decodeWarning && activeTab === 'decode'" :title="decodeWarning" type="warning" show-icon class="tool-feedback" />
+        <el-alert v-if="signError && activeTab === 'sign'" :title="signError" type="error" show-icon class="tool-feedback" />
 
-    <el-tabs v-model="activeTab">
-      <el-tab-pane label="解密 / 验签" name="decode">
-        <el-form label-position="top">
-          <el-form-item label="JWT Token">
-            <el-input v-model="input" type="textarea" :rows="8" placeholder="请输入 header.payload.signature" />
-          </el-form-item>
-          <el-form-item label="Secret">
-            <el-input v-model="secret" type="password" show-password placeholder="验签时输入 HMAC secret" />
-          </el-form-item>
-        </el-form>
-
-        <div class="action-row">
-          <el-button type="primary" @click="runDecode">解密 Token</el-button>
-          <el-button type="success" @click="runVerify">验签</el-button>
-          <el-button @click="clearDecode">清空</el-button>
-          <el-button :disabled="!input.trim()" @click="copyText(input, 'JWT Token')">复制 Token</el-button>
-        </div>
-
-        <el-alert v-if="decodeError" :title="decodeError" type="error" show-icon class="tool-feedback" />
-        <el-alert v-if="decodeWarning" :title="decodeWarning" type="warning" show-icon class="tool-feedback" />
-
-        <div v-if="header || payload" class="jwt-result-grid">
-          <el-card class="result-container" shadow="never">
+        <div v-if="activeTab === 'decode' && (header || payload)" class="jwt-result-grid">
+          <el-card class="nested-result-card" shadow="never">
             <template #header>Header</template>
             <pre class="result-json">{{ header }}</pre>
             <div class="result-actions">
@@ -50,7 +75,7 @@
             </div>
           </el-card>
 
-          <el-card class="result-container" shadow="never">
+          <el-card class="nested-result-card" shadow="never">
             <template #header>Payload</template>
             <pre class="result-json">{{ payload }}</pre>
             <div class="result-actions">
@@ -58,7 +83,7 @@
             </div>
           </el-card>
 
-          <el-card class="result-container" shadow="never">
+          <el-card class="nested-result-card" shadow="never">
             <template #header>Signature</template>
             <pre class="result-json">{{ signature }}</pre>
             <div class="result-actions">
@@ -66,7 +91,7 @@
             </div>
           </el-card>
 
-          <el-card class="result-container" shadow="never">
+          <el-card class="nested-result-card" shadow="never">
             <template #header>Verification</template>
             <div class="result-meta">
               <strong>Algorithm</strong>
@@ -78,38 +103,8 @@
             </div>
           </el-card>
         </div>
-      </el-tab-pane>
 
-      <el-tab-pane label="加密 / 签名" name="sign">
-        <el-form label-position="top">
-          <el-form-item label="Algorithm">
-            <el-select v-model="signAlgorithm" class="full-width">
-              <el-option label="HS256" value="HS256" />
-              <el-option label="HS384" value="HS384" />
-              <el-option label="HS512" value="HS512" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Header JSON">
-            <el-input v-model="signHeader" type="textarea" :rows="5" />
-          </el-form-item>
-          <el-form-item label="Payload JSON">
-            <el-input v-model="signPayload" type="textarea" :rows="7" />
-          </el-form-item>
-          <el-form-item label="Secret">
-            <el-input v-model="signSecret" type="password" show-password placeholder="请输入 HMAC secret" />
-          </el-form-item>
-        </el-form>
-
-        <div class="action-row">
-          <el-button type="primary" @click="runSign">生成 Token</el-button>
-          <el-button :disabled="!outputToken" @click="copyText(outputToken, 'JWT Token')">复制 Token</el-button>
-          <el-button @click="clearSign">清空</el-button>
-        </div>
-
-        <el-alert v-if="signError" :title="signError" type="error" show-icon class="tool-feedback" />
-
-        <el-card v-if="outputToken" class="result-container" shadow="never">
-          <template #header>签名结果</template>
+        <div v-else-if="activeTab === 'sign' && outputToken">
           <pre class="result-json">{{ outputToken }}</pre>
           <div class="result-meta">
             <strong>Algorithm</strong>
@@ -119,13 +114,17 @@
             <strong>Signature</strong>
             <span>{{ signResult.signature }}</span>
           </div>
-        </el-card>
-      </el-tab-pane>
-    </el-tabs>
-  </el-card>
+        </div>
+
+        <div v-else class="tool-empty-result">暂无结果</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { decodeJwt, signJwt, verifyJwt } from '../utils/devTools'
 import { copyToolOutput, emitToolAction, summarizeText } from './toolUi'
 
@@ -134,6 +133,10 @@ const defaultSignPayload = '{\n  "sub": "123",\n  "name": "AhuTools",\n  "iat": 
 
 export default {
   name: 'JwtTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     historyRestore: {
       type: Object,
