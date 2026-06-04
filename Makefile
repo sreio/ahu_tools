@@ -25,12 +25,12 @@ dev:
 
 # 运行测试
 test:
-	go test ./...
 	npm run test --prefix frontend
+	npm run build --prefix frontend
+	go test ./...
 
 # 完整验证
 verify: test check-version
-	npm run build --prefix frontend
 
 # Windows构建
 build-windows: sync-version
