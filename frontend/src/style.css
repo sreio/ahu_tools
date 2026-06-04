@@ -653,7 +653,7 @@ body {
 
 .workbench-toolbar {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(220px, 360px) auto;
+  grid-template-columns: minmax(180px, 1fr) auto;
   gap: 16px;
   align-items: center;
   padding: 18px 22px;
@@ -680,10 +680,6 @@ body {
 .workbench-title p {
   margin: 0;
   color: #6b7280;
-}
-
-.workbench-tool-search {
-  width: 100%;
 }
 
 .workbench-actions,

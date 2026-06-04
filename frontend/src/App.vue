@@ -22,13 +22,9 @@
     <el-main class="main-content">
       <WorkbenchShell
         :active-tool="activeToolDefinition"
-        :tools="tools"
-        @select-tool="selectTool"
         @open-history="openToolHistory"
         @open-settings="showSettings = true"
         @open-h5-settings="showH5Settings = true"
-        @open-updates="showUpdates = true"
-        @open-tool-order="openToolOrder"
       >
         <component
           :is="activeToolDefinition.component"

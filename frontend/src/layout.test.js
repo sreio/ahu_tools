@@ -42,7 +42,20 @@ describe('application layout', () => {
     expect(app).toContain("import WorkbenchShell from './components/WorkbenchShell.vue'")
     expect(app).toContain('<WorkbenchShell')
     expect(app).toContain(':active-tool="activeToolDefinition"')
-    expect(app).toContain('@select-tool="selectTool"')
+  })
+
+  it('does not duplicate sidebar navigation and settings in the workbench toolbar', () => {
+    const app = readFileSync(resolve(__dirname, 'App.vue'), 'utf8')
+    const shell = readFileSync(resolve(__dirname, 'components/WorkbenchShell.vue'), 'utf8')
+    const workbenchUsage = app.match(/<WorkbenchShell[\s\S]*?<\/WorkbenchShell>/)?.[0] || ''
+
+    expect(workbenchUsage).not.toContain(':tools="tools"')
+    expect(workbenchUsage).not.toContain('@select-tool="selectTool"')
+    expect(shell).not.toContain('<el-select')
+    expect(shell).not.toContain('搜索工具')
+    expect(shell).not.toContain('open-tool-order')
+    expect(shell).not.toContain('open-updates')
+    expect(shell).not.toContain('<el-popover')
   })
 
   it('migrates decrypt tools to input and result panels', () => {
