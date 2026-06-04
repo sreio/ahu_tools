@@ -21,7 +21,7 @@ AhuTools 是一个基于 Go + Wails v2 + Vue 3 的桌面开发者工具箱，提
 ## 项目信息
 
 - 软件名称：AhuTools
-- 版本：1.1.9
+- 版本：见 `VERSION`
 - 作者：sreio
 
 ## 快速开始
@@ -44,7 +44,7 @@ make dev
 # Go + 前端测试
 make test
 
-# Go + 前端测试，并验证前端构建
+# Go + 前端测试、版本同步检查，并验证前端构建
 make verify
 
 # 也可以单独执行
@@ -72,6 +72,15 @@ make build-linux     # Linux AMD64 & ARM64
 ```
 
 `build.sh` 会先安装依赖并运行 Go/frontend 测试，再开始多平台构建。
+
+### 发布版本
+
+发布前只需要修改根目录 `VERSION`。`make build` 和 `./build.sh` 会自动把它同步到 `wails.json`、`frontend/package.json` 和 `frontend/package-lock.json`；也可以手动运行：
+
+```bash
+make sync-version
+make check-version
+```
 
 ## 使用说明
 
@@ -128,7 +137,9 @@ ahu_tools/
 make install          # 安装依赖
 make dev              # 开发模式
 make test             # 运行 Go 和前端测试
-make verify           # 运行测试并验证前端构建
+make verify           # 运行测试、版本同步检查并验证前端构建
+make sync-version     # 同步 VERSION 到发布元数据
+make check-version    # 检查发布元数据是否匹配 VERSION
 make build            # 构建所有平台
 make build-windows    # 构建 Windows 版本
 make build-darwin     # 构建 macOS 版本
@@ -168,5 +179,5 @@ sreio
 
 ---
 
-版本：1.1.9  
+版本：见 `VERSION`  
 更新日期：2026

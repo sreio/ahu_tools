@@ -2,12 +2,11 @@
 
 # AhuTools 构建脚本
 # 作者: sreio
-# 版本: 1.1.9
 
 set -e
 
 APP_NAME="AhuTools"
-VERSION="1.1.9"
+VERSION="$(tr -d '[:space:]' < VERSION)"
 
 echo "================================"
 echo "  $APP_NAME v$VERSION"
@@ -21,6 +20,8 @@ if ! command -v wails &> /dev/null; then
     echo "请运行: go install github.com/wailsapp/wails/v2/cmd/wails@latest"
     exit 1
 fi
+
+node scripts/sync-version.mjs
 
 # 安装依赖
 echo "📦 安装依赖..."

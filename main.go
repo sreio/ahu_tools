@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -12,7 +13,11 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-const Version = "1.1.9"
+//go:embed VERSION
+var versionFile string
+
+var Version = strings.TrimSpace(versionFile)
+
 const AppName = "IT工具箱"
 const Author = "zhichi"
 

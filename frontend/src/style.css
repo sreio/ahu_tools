@@ -324,7 +324,7 @@ body {
 }
 
 .tool-card.el-card {
-  max-width: 1080px;
+  width: 100%;
   min-height: calc(100vh - 64px);
   border: none;
   border-radius: 18px;

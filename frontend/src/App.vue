@@ -163,7 +163,7 @@ export default {
       tools: [...defaultTools],
       activeTool: 'decrypt',
       appName: 'IT工具箱',
-      version: '1.1.9',
+      version: '',
       author: 'sreio',
       configs: [],
       h5Configs: [],
