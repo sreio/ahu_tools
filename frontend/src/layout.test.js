@@ -56,4 +56,14 @@ describe('application layout', () => {
       expect(source).not.toContain('<el-card class="tool-card"')
     }
   })
+
+  it('uses an overflow menu for low-frequency JSON actions', () => {
+    const json = readFileSync(resolve(__dirname, 'tools/JsonTool.vue'), 'utf8')
+
+    expect(json).toContain('<ToolWorkspace>')
+    expect(json).toContain('<el-dropdown')
+    expect(json).toContain('中文转 Unicode')
+    expect(json).toContain('去除反斜杠')
+    expect(json).not.toMatch(/<div class="action-row">[\s\S]*中文转 Unicode[\s\S]*去除反斜杠[\s\S]*<\/div>/)
+  })
 })

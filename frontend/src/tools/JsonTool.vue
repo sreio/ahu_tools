@@ -1,36 +1,50 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>JSON</h2>
-          <p>格式化、压缩、Unicode 转换和反斜杠转义处理。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'json')">历史</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="格式化、压缩或执行低频转换。">
+        <template #actions>
+          <el-button type="primary" @click="runFormat">格式化</el-button>
+          <el-button @click="runMinify">压缩</el-button>
+          <el-dropdown>
+            <el-button>更多</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="runEncodeUnicode">中文转 Unicode</el-dropdown-item>
+                <el-dropdown-item @click="runDecodeUnicode">Unicode 转中文</el-dropdown-item>
+                <el-dropdown-item @click="runAddSlashes">添加反斜杠</el-dropdown-item>
+                <el-dropdown-item @click="runRemoveSlashes">去除反斜杠</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
+
+        <el-input v-model="input" class="tool-fill-input" type="textarea" placeholder="请输入 JSON" />
+
+        <template #footer>
+          <span>{{ input.trim().length }} 字符</span>
+          <el-button text :disabled="!input" @click="input = ''">清空输入</el-button>
+        </template>
+      </ToolPanel>
     </template>
 
-    <el-input v-model="input" type="textarea" :rows="10" placeholder="请输入 JSON" />
-    <div class="action-row">
-      <el-button type="primary" @click="runFormat">格式化</el-button>
-      <el-button @click="runMinify">压缩</el-button>
-      <el-button @click="runEncodeUnicode">中文转 Unicode</el-button>
-      <el-button @click="runDecodeUnicode">Unicode 转中文</el-button>
-      <el-button @click="runAddSlashes">添加反斜杠</el-button>
-      <el-button @click="runRemoveSlashes">去除反斜杠</el-button>
-      <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
-    </div>
+    <template #result>
+      <ToolPanel title="输出" :description="output ? '转换后的内容。' : '执行操作后输出会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
+          <el-button :disabled="!output" @click="input = output">替换输入</el-button>
+        </template>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-    <el-card v-if="output" class="result-container" shadow="never">
-      <pre class="result-json">{{ output }}</pre>
-    </el-card>
-  </el-card>
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <div v-else class="tool-empty-result">暂无输出</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import {
   addJsonSlashes,
   decodeChineseUnicode,
@@ -43,6 +57,10 @@ import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 
 export default {
   name: 'JsonTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     historyRestore: {
       type: Object,
