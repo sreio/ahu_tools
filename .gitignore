@@ -47,6 +47,7 @@ Thumbs.db
 *.temp
 *.bak
 *.backup
+.superpowers/
 
 # Build artifacts
 *.o
