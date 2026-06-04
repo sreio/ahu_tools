@@ -66,4 +66,24 @@ describe('application layout', () => {
     expect(json).toContain('去除反斜杠')
     expect(json).not.toMatch(/<div class="action-row">[\s\S]*中文转 Unicode[\s\S]*去除反斜杠[\s\S]*<\/div>/)
   })
+
+  it('migrates simple tools to the workbench panel pattern', () => {
+    const filenames = [
+      'Base64Tool.vue',
+      'UrlTool.vue',
+      'HtmlEntityTool.vue',
+      'TimestampTool.vue',
+      'RandomTool.vue',
+      'HashTool.vue',
+      'RegexTool.vue',
+    ]
+
+    for (const filename of filenames) {
+      const source = readFileSync(resolve(__dirname, `tools/${filename}`), 'utf8')
+      expect(source).toContain('<ToolWorkspace>')
+      expect(source).toContain('<ToolPanel title="输入"')
+      expect(source).toContain('<ToolPanel title="输出"')
+      expect(source).not.toContain('<el-card class="tool-card"')
+    }
+  })
 })

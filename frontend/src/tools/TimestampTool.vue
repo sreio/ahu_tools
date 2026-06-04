@@ -1,31 +1,17 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>时间戳转换</h2>
-          <p>秒/毫秒 timestamp 与本地日期时间互转。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'timestamp')">历史</el-button>
-        </div>
-      </div>
-    </template>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="秒/毫秒 timestamp 与本地日期时间互转。">
+        <template #actions>
+          <el-button type="primary" @click="convertTimestamp">转为日期时间</el-button>
+          <el-button @click="convertDate">转为 timestamp</el-button>
+          <el-button @click="useCurrentTime">当前时间</el-button>
+        </template>
 
-    <el-row :gutter="20">
-      <el-col :xs="24" :md="12">
-        <el-form label-position="top">
+        <el-form label-position="top" class="tool-section">
           <el-form-item label="Timestamp">
             <el-input v-model="timestampInput" placeholder="1704067200 或 1704067200000" clearable />
           </el-form-item>
-          <div class="action-row">
-            <el-button type="primary" @click="convertTimestamp">转为日期时间</el-button>
-          </div>
-        </el-form>
-      </el-col>
-
-      <el-col :xs="24" :md="12">
-        <el-form label-position="top">
           <el-form-item label="日期时间">
             <el-date-picker
               v-model="dateInput"
@@ -35,30 +21,36 @@
               class="full-width"
             />
           </el-form-item>
-          <div class="action-row">
-            <el-button type="primary" @click="convertDate">转为 timestamp</el-button>
-            <el-button @click="useCurrentTime">当前时间</el-button>
-          </div>
         </el-form>
-      </el-col>
-    </el-row>
+      </ToolPanel>
+    </template>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-    <el-card v-if="output" class="result-container" shadow="never">
-      <pre class="result-json">{{ output }}</pre>
-      <div class="result-actions">
-        <el-button @click="copyOutput">复制输出</el-button>
-      </div>
-    </el-card>
-  </el-card>
+    <template #result>
+      <ToolPanel title="输出" :description="output ? '转换后的时间数据。' : '转换结果会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
+        </template>
+
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <div v-else class="tool-empty-result">暂无输出</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { dateToTimestamp, timestampToDate } from '../utils/devTools'
 import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'TimestampTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     historyRestore: {
       type: Object,

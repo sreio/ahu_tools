@@ -1,37 +1,47 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>Base64</h2>
-          <p>UTF-8 文本 Base64 encode/decode。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'base64')">历史</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="UTF-8 文本 Base64 encode/decode。">
+        <template #actions>
+          <el-button type="primary" @click="runEncode">Encode</el-button>
+          <el-button @click="runDecode">Decode</el-button>
+        </template>
+
+        <el-input v-model="input" class="tool-fill-input" type="textarea" placeholder="请输入文本或 Base64" />
+
+        <template #footer>
+          <span>{{ input.trim().length }} 字符</span>
+          <el-button text :disabled="!input" @click="input = ''">清空输入</el-button>
+        </template>
+      </ToolPanel>
     </template>
 
-    <el-input v-model="input" type="textarea" :rows="8" placeholder="请输入文本或 Base64" />
-    <div class="action-row">
-      <el-button type="primary" @click="runEncode">Encode</el-button>
-      <el-button @click="runDecode">Decode</el-button>
-      <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
-    </div>
+    <template #result>
+      <ToolPanel title="输出" :description="output ? '转换后的内容。' : '执行操作后输出会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
+        </template>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-    <el-card v-if="output" class="result-container" shadow="never">
-      <pre class="result-json">{{ output }}</pre>
-    </el-card>
-  </el-card>
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <div v-else class="tool-empty-result">暂无输出</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { decodeBase64, encodeBase64 } from '../utils/devTools'
 import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 
 export default {
   name: 'Base64Tool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     historyRestore: {
       type: Object,
@@ -72,7 +82,7 @@ export default {
     },
     async copyOutput() {
       await copyToolOutput(this, this.output, 'Base64 输出')
-    }
+    },
   },
 }
 </script>

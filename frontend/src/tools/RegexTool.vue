@@ -1,47 +1,56 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>正则测试</h2>
-          <p>使用 JavaScript RegExp 测试文本匹配结果。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'regex')">历史</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="使用 JavaScript RegExp 测试文本匹配结果。">
+        <template #actions>
+          <el-button type="primary" @click="runTest">测试</el-button>
+        </template>
+
+        <el-form label-position="top" class="tool-section">
+          <el-form-item label="Pattern">
+            <el-input v-model="pattern" placeholder="例如 (?<word>\\w+)" clearable />
+          </el-form-item>
+          <el-form-item label="Flags（d/g/i/m/s/u/v/y）">
+            <el-input v-model="flags" placeholder="例如 gim" clearable />
+          </el-form-item>
+          <el-form-item label="测试文本" class="tool-fill-input">
+            <el-input v-model="text" type="textarea" placeholder="请输入待匹配文本" />
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <span>{{ text.length }} 字符</span>
+          <el-button text :disabled="!text" @click="text = ''">清空文本</el-button>
+        </template>
+      </ToolPanel>
     </template>
 
-    <el-form label-position="top">
-      <el-form-item label="Pattern">
-        <el-input v-model="pattern" placeholder="例如 (?<word>\\w+)" clearable />
-      </el-form-item>
-      <el-form-item label="Flags（d/g/i/m/s/u/v/y）">
-        <el-input v-model="flags" placeholder="例如 gim" clearable />
-      </el-form-item>
-      <el-form-item label="测试文本">
-        <el-input v-model="text" type="textarea" :rows="8" placeholder="请输入待匹配文本" />
-      </el-form-item>
-    </el-form>
+    <template #result>
+      <ToolPanel title="输出" :description="output ? '正则匹配结果。' : '测试结果会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
+        </template>
 
-    <div class="action-row">
-      <el-button type="primary" @click="runTest">测试</el-button>
-      <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
-    </div>
-
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-    <el-card v-if="output" class="result-container" shadow="never">
-      <pre class="result-json">{{ output }}</pre>
-    </el-card>
-  </el-card>
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <div v-else class="tool-empty-result">暂无输出</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { testRegex } from '../utils/devTools'
 import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'RegexTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     historyRestore: {
       type: Object,

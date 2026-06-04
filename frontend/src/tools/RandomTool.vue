@@ -1,57 +1,61 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>UUID / 随机</h2>
-          <p>生成 UUID v4、随机 Hex 和 Base62 字符串。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'random')">历史</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="生成 UUID v4、随机 Hex 和 Base62 字符串。">
+        <template #actions>
+          <el-button type="primary" @click="runGenerate">生成</el-button>
+        </template>
+
+        <el-form label-position="top">
+          <el-form-item label="类型">
+            <el-radio-group v-model="mode">
+              <el-radio-button label="uuid">UUID v4</el-radio-button>
+              <el-radio-button label="hex">Hex</el-radio-button>
+              <el-radio-button label="base62">Base62</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-row :gutter="16">
+            <el-col :xs="24" :md="12">
+              <el-form-item label="长度（1..512）">
+                <el-input-number v-model="length" :min="1" :max="512" :disabled="mode === 'uuid'" class="full-width" />
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :md="12">
+              <el-form-item label="数量（1..100）">
+                <el-input-number v-model="count" :min="1" :max="100" class="full-width" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
+      </ToolPanel>
     </template>
 
-    <el-form label-position="top">
-      <el-form-item label="类型">
-        <el-radio-group v-model="mode">
-          <el-radio-button label="uuid">UUID v4</el-radio-button>
-          <el-radio-button label="hex">Hex</el-radio-button>
-          <el-radio-button label="base62">Base62</el-radio-button>
-        </el-radio-group>
-      </el-form-item>
-      <el-row :gutter="16">
-        <el-col :xs="24" :md="12">
-          <el-form-item label="长度（1..512）">
-            <el-input-number v-model="length" :min="1" :max="512" :disabled="mode === 'uuid'" class="full-width" />
-          </el-form-item>
-        </el-col>
-        <el-col :xs="24" :md="12">
-          <el-form-item label="数量（1..100）">
-            <el-input-number v-model="count" :min="1" :max="100" class="full-width" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-    </el-form>
+    <template #result>
+      <ToolPanel title="输出" :description="output ? '生成后的随机内容。' : '生成结果会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
+        </template>
 
-    <div class="action-row">
-      <el-button type="primary" @click="runGenerate">生成</el-button>
-      <el-button :disabled="!output" @click="copyOutput">复制输出</el-button>
-    </div>
-
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-    <el-card v-if="output" class="result-container" shadow="never">
-      <pre class="result-json">{{ output }}</pre>
-    </el-card>
-  </el-card>
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <div v-else class="tool-empty-result">暂无输出</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { generateRandomStrings } from '../utils/devTools'
 import { applyToolResult, copyToolOutput } from './toolUi'
 
 export default {
   name: 'RandomTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     historyRestore: {
       type: Object,
