@@ -35,4 +35,13 @@ describe('application layout', () => {
 
     expect(css).toMatch(/@media\s*\(max-width:\s*900px\)[\s\S]*\.tool-workspace[\s\S]*grid-template-columns:\s*1fr/)
   })
+
+  it('wraps the active tool in the workbench shell', () => {
+    const app = readFileSync(resolve(__dirname, 'App.vue'), 'utf8')
+
+    expect(app).toContain("import WorkbenchShell from './components/WorkbenchShell.vue'")
+    expect(app).toContain('<WorkbenchShell')
+    expect(app).toContain(':active-tool="activeToolDefinition"')
+    expect(app).toContain('@select-tool="selectTool"')
+  })
 })

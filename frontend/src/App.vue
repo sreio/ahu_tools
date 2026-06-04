@@ -20,19 +20,30 @@
     <div v-if="!sidebarCollapsed" class="sidebar-resizer" @mousedown="startSidebarResize" />
 
     <el-main class="main-content">
-      <component
-        :is="activeToolDefinition.component"
-        :configs="configs"
-        :app-name="appName"
-        :version="version"
-        :history-restore="historyRestore"
-        :h5-configs="h5Configs"
-        @toast="showToast"
+      <WorkbenchShell
+        :active-tool="activeToolDefinition"
+        :tools="tools"
+        @select-tool="selectTool"
+        @open-history="openToolHistory"
         @open-settings="showSettings = true"
         @open-h5-settings="showH5Settings = true"
-        @open-history="openToolHistory"
-        @tool-action="recordToolAction"
-      />
+        @open-updates="showUpdates = true"
+        @open-tool-order="openToolOrder"
+      >
+        <component
+          :is="activeToolDefinition.component"
+          :configs="configs"
+          :app-name="appName"
+          :version="version"
+          :history-restore="historyRestore"
+          :h5-configs="h5Configs"
+          @toast="showToast"
+          @open-settings="showSettings = true"
+          @open-h5-settings="showH5Settings = true"
+          @open-history="openToolHistory"
+          @tool-action="recordToolAction"
+        />
+      </WorkbenchShell>
     </el-main>
 
     <ConfigModal
@@ -115,6 +126,7 @@ import { ElMessage } from 'element-plus'
 import ConfigModal from './components/ConfigModal.vue'
 import H5ConfigModal from './components/H5ConfigModal.vue'
 import SidebarNav from './components/SidebarNav.vue'
+import WorkbenchShell from './components/WorkbenchShell.vue'
 import {
   CheckForUpdate,
   ClearToolHistory,
@@ -157,6 +169,7 @@ export default {
     H5ConfigModal,
     SidebarNav,
     UpdateTool,
+    WorkbenchShell,
   },
   data() {
     return {
