@@ -1,70 +1,75 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>数据解密</h2>
-          <p>选择环境并输入加密数据进行 AES-CBC 解密。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'decrypt')">历史</el-button>
-          <el-button type="primary" @click="$emit('open-settings')">环境配置</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="选择环境并粘贴 AES-CBC 密文。">
+        <template #actions>
+          <el-button type="primary" :loading="loading" :disabled="!isFormValid" @click="handleDecrypt">
+            解密数据
+          </el-button>
+        </template>
+
+        <el-form label-position="top" class="tool-section" @submit.prevent="handleDecrypt">
+          <el-form-item label="环境选择">
+            <el-select v-model="environment" placeholder="请选择环境" class="full-width">
+              <el-option
+                v-for="config in configs"
+                :key="config.environment"
+                :label="config.description || config.environment"
+                :value="config.environment"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="加密数据" class="tool-fill-input">
+            <el-input
+              v-model="encryptedData"
+              type="textarea"
+              placeholder="请输入要解密的加密数据..."
+            />
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <span>{{ encryptedData.trim().length }} 字符</span>
+          <el-button text :disabled="!encryptedData" @click="encryptedData = ''">清空输入</el-button>
+        </template>
+      </ToolPanel>
     </template>
 
-    <el-form label-position="top" @submit.prevent="handleDecrypt">
-      <el-form-item label="环境选择">
-        <el-select v-model="environment" placeholder="请选择环境" class="full-width">
-          <el-option
-            v-for="config in configs"
-            :key="config.environment"
-            :label="config.description || config.environment"
-            :value="config.environment"
-          />
-        </el-select>
-      </el-form-item>
+    <template #result>
+      <ToolPanel title="结果" :description="result ? '解密结果可切换 JSON 或原始数据。' : '执行解密后结果会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!result" @click="copyResult">复制结果</el-button>
+          <el-button :disabled="!result && !error" @click="clearResult">清空结果</el-button>
+        </template>
 
-      <el-form-item label="加密数据">
-        <el-input
-          v-model="encryptedData"
-          type="textarea"
-          :rows="8"
-          placeholder="请输入要解密的加密数据..."
-        />
-      </el-form-item>
-
-      <el-button type="primary" native-type="submit" :loading="loading" :disabled="!isFormValid">
-        解密数据
-      </el-button>
-    </el-form>
-
-    <el-card v-if="result" class="result-container" shadow="never">
-      <template #header>解密结果</template>
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="JSON格式" name="json">
-          <pre class="result-json">{{ formattedJson }}</pre>
-        </el-tab-pane>
-        <el-tab-pane label="原始数据" name="raw">
-          <pre class="result-json">{{ result.raw }}</pre>
-        </el-tab-pane>
-      </el-tabs>
-      <div class="result-actions">
-        <el-button type="success" @click="copyResult">复制结果</el-button>
-        <el-button type="danger" @click="clearResult">清空结果</el-button>
-      </div>
-    </el-card>
-
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-  </el-card>
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <el-tabs v-else-if="result" v-model="activeTab">
+          <el-tab-pane label="JSON格式" name="json">
+            <pre class="result-json">{{ formattedJson }}</pre>
+          </el-tab-pane>
+          <el-tab-pane label="原始数据" name="raw">
+            <pre class="result-json">{{ result.raw }}</pre>
+          </el-tab-pane>
+        </el-tabs>
+        <div v-else class="tool-empty-result">暂无结果</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { Decrypt } from '../services/wailsApi'
 import { copyToolOutput, emitToolAction, summarizeText } from './toolUi'
 
 export default {
   name: 'DecryptTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     configs: {
       type: Array,

@@ -1,96 +1,96 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>H5数据解密</h2>
-          <p>支持 H5 请求/响应 payload 中 secretKey + encryptData 的 RSA/AES-256-CBC 解密。</p>
-        </div>
-        <div class="tool-header-actions">
-          <el-button @click="$emit('open-history', 'h5-decrypt')">历史</el-button>
-          <el-button type="primary" @click="$emit('open-h5-settings')">H5配置</el-button>
-        </div>
-      </div>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="输入" description="选择 H5 环境并粘贴请求或响应 payload。">
+        <template #actions>
+          <el-button type="primary" :loading="loading" :disabled="!isFormValid" @click="handleDecrypt">
+            {{ decryptButtonText }}
+          </el-button>
+        </template>
+
+        <el-tabs v-model="mode" class="tool-tabs" @tab-change="clearResult">
+          <el-tab-pane label="请求解密" name="request">
+            <el-alert
+              title="请求解密使用 SERVER_RSA_PRIVATE_KEY 解密 secretKey，并使用请求 AES 配置处理 raw encryptData。"
+              type="info"
+              show-icon
+              :closable="false"
+              class="tool-feedback"
+            />
+          </el-tab-pane>
+          <el-tab-pane label="响应解密" name="response">
+            <el-alert
+              title="响应解密使用 CLIENT_RSA_PRIVATE_KEY 解密 secretKey，并使用响应 AES 配置处理 raw encryptData。"
+              type="info"
+              show-icon
+              :closable="false"
+              class="tool-feedback"
+            />
+          </el-tab-pane>
+        </el-tabs>
+
+        <el-form label-position="top" class="tool-section" @submit.prevent="handleDecrypt">
+          <el-form-item label="环境选择">
+            <el-select v-model="environment" placeholder="请选择 H5 环境" class="full-width">
+              <el-option
+                v-for="config in h5Configs"
+                :key="config.environment"
+                :label="config.description || config.environment"
+                :value="config.environment"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item :label="inputLabel" class="tool-fill-input">
+            <el-input
+              v-model="input"
+              type="textarea"
+              :placeholder="inputPlaceholder"
+            />
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <span>{{ input.trim().length }} 字符</span>
+          <el-button text :disabled="!input" @click="input = ''">清空输入</el-button>
+        </template>
+      </ToolPanel>
     </template>
 
-    <el-tabs v-model="mode" class="tool-tabs" @tab-change="clearResult">
-      <el-tab-pane label="请求解密" name="request">
-        <el-alert
-          title="请求解密使用 SERVER_RSA_PRIVATE_KEY 解密 secretKey，并使用请求 AES 配置处理 raw encryptData。"
-          type="info"
-          show-icon
-          :closable="false"
-          class="tool-feedback"
-        />
-      </el-tab-pane>
-      <el-tab-pane label="响应解密" name="response">
-        <el-alert
-          title="响应解密使用 CLIENT_RSA_PRIVATE_KEY 解密 secretKey，并使用响应 AES 配置处理 raw encryptData。"
-          type="info"
-          show-icon
-          :closable="false"
-          class="tool-feedback"
-        />
-      </el-tab-pane>
-    </el-tabs>
+    <template #result>
+      <ToolPanel title="结果" :description="result ? resultModeLabel : '执行解密后结果会显示在这里。'">
+        <template #actions>
+          <el-button :disabled="!result" @click="copyResult">复制结果</el-button>
+          <el-button :disabled="!result && !error" @click="clearResult">清空结果</el-button>
+        </template>
 
-    <el-form label-position="top" @submit.prevent="handleDecrypt">
-      <el-form-item label="环境选择">
-        <el-select v-model="environment" placeholder="请选择 H5 环境" class="full-width">
-          <el-option
-            v-for="config in h5Configs"
-            :key="config.environment"
-            :label="config.description || config.environment"
-            :value="config.environment"
-          />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item :label="inputLabel">
-        <el-input
-          v-model="input"
-          type="textarea"
-          :rows="10"
-          :placeholder="inputPlaceholder"
-        />
-      </el-form-item>
-
-      <el-button type="primary" native-type="submit" :loading="loading" :disabled="!isFormValid">
-        {{ decryptButtonText }}
-      </el-button>
-    </el-form>
-
-    <el-card v-if="result" class="result-container" shadow="never">
-      <template #header>
-        <div class="tool-header compact">
-          <span>解密结果</span>
-          <el-tag>{{ resultModeLabel }}</el-tag>
-        </div>
-      </template>
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="JSON格式" name="json">
-          <pre class="result-json">{{ formattedJson }}</pre>
-        </el-tab-pane>
-        <el-tab-pane label="原始数据" name="raw">
-          <pre class="result-json">{{ result.raw }}</pre>
-        </el-tab-pane>
-      </el-tabs>
-      <div class="result-actions">
-        <el-button type="success" @click="copyResult">复制结果</el-button>
-        <el-button type="danger" @click="clearResult">清空结果</el-button>
-      </div>
-    </el-card>
-
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-  </el-card>
+        <el-alert v-if="error" :title="error" type="error" show-icon />
+        <el-tabs v-else-if="result" v-model="activeTab">
+          <el-tab-pane label="JSON格式" name="json">
+            <pre class="result-json">{{ formattedJson }}</pre>
+          </el-tab-pane>
+          <el-tab-pane label="原始数据" name="raw">
+            <pre class="result-json">{{ result.raw }}</pre>
+          </el-tab-pane>
+        </el-tabs>
+        <div v-else class="tool-empty-result">暂无结果</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { H5Decrypt } from '../services/wailsApi'
 import { copyToolOutput, emitToolAction, summarizeText } from './toolUi'
 
 export default {
   name: 'H5DecryptTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     h5Configs: {
       type: Array,

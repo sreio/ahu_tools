@@ -44,4 +44,16 @@ describe('application layout', () => {
     expect(app).toContain(':active-tool="activeToolDefinition"')
     expect(app).toContain('@select-tool="selectTool"')
   })
+
+  it('migrates decrypt tools to input and result panels', () => {
+    const decrypt = readFileSync(resolve(__dirname, 'tools/DecryptTool.vue'), 'utf8')
+    const h5 = readFileSync(resolve(__dirname, 'tools/H5DecryptTool.vue'), 'utf8')
+
+    for (const source of [decrypt, h5]) {
+      expect(source).toContain('<ToolWorkspace>')
+      expect(source).toContain('<ToolPanel title="输入"')
+      expect(source).toContain('<ToolPanel title="结果"')
+      expect(source).not.toContain('<el-card class="tool-card"')
+    }
+  })
 })
