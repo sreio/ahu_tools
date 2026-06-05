@@ -21,6 +21,36 @@ describe('application layout', () => {
     expect(css).toMatch(/\.tool-panel-body[^}]*overflow-y:\s*auto/)
   })
 
+  it('lets tool panel content fill available height without growing the workbench', () => {
+    const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8')
+    const panelRule = css.match(/\.tool-panel\s*\{[^}]*\}/)?.[0] || ''
+    const bodyRule = css.match(/\.tool-panel-body\s*\{[^}]*\}/)?.[0] || ''
+    const sectionRule = css.match(/\.tool-panel-body\s+>\s+\.tool-section\s*\{[^}]*\}/)?.[0] || ''
+
+    expect(panelRule).toContain('height: 100%')
+    expect(bodyRule).toContain('overflow-y: auto')
+    expect(bodyRule).toContain('overscroll-behavior: contain')
+    expect(sectionRule).toContain('min-height: 100%')
+  })
+
+  it('makes fill inputs expand inside the panel and scroll internally when content is long', () => {
+    const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8')
+    const fillItemRule = css.match(/\.tool-fill-input\s*\{[^}]*\}/)?.[0] || ''
+    const fillContentRule = css.match(/\.tool-fill-input\s+\.el-form-item__content\s*\{[^}]*\}/)?.[0] || ''
+    const textareaWrapperRule = css.match(/\.tool-fill-input\s+\.el-textarea\s*\{[^}]*\}/)?.[0] || ''
+    const textareaRule = css.match(/\.tool-fill-input\s+\.el-textarea__inner\s*\{[^}]*\}/)?.[0] || ''
+
+    expect(fillItemRule).toContain('flex: 1')
+    expect(fillItemRule).toContain('min-height: 420px')
+    expect(fillContentRule).toContain('min-height: 0')
+    expect(fillContentRule).toContain('align-items: stretch')
+    expect(textareaWrapperRule).toContain('min-height: 420px')
+    expect(textareaRule).toContain('min-height: 420px !important')
+    expect(textareaRule).toContain('height: 100% !important')
+    expect(textareaRule).toContain('overflow-y: auto')
+    expect(textareaRule).toContain('resize: vertical')
+  })
+
   it('keeps tool panel actions outside the scrolling body', () => {
     const panel = readFileSync(resolve(__dirname, 'components/ToolPanel.vue'), 'utf8')
 
