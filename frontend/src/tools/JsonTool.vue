@@ -18,7 +18,7 @@
           </el-dropdown>
         </template>
 
-        <el-input v-model="input" class="tool-fill-input" type="textarea" placeholder="请输入 JSON" />
+        <JsonEditorPanel v-model="input" class="tool-fill-input" placeholder="请输入 JSON" />
 
         <template #footer>
           <span>{{ input.trim().length }} 字符</span>
@@ -35,7 +35,7 @@
         </template>
 
         <el-alert v-if="error" :title="error" type="error" show-icon />
-        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <JsonViewer v-else-if="output" :content="output" />
         <div v-else class="tool-empty-result">暂无输出</div>
       </ToolPanel>
     </template>
@@ -43,6 +43,8 @@
 </template>
 
 <script>
+import JsonEditorPanel from '../components/JsonEditorPanel.vue'
+import JsonViewer from '../components/JsonViewer.vue'
 import ToolPanel from '../components/ToolPanel.vue'
 import ToolWorkspace from '../components/ToolWorkspace.vue'
 import {
@@ -58,6 +60,8 @@ import { applyToolResult, copyToolOutput, summarizeText } from './toolUi'
 export default {
   name: 'JsonTool',
   components: {
+    JsonEditorPanel,
+    JsonViewer,
     ToolPanel,
     ToolWorkspace,
   },

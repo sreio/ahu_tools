@@ -44,7 +44,7 @@
         </template>
 
         <el-alert v-if="error" :title="error" type="error" show-icon />
-        <pre v-else-if="output" class="result-json">{{ output }}</pre>
+        <JsonViewer v-else-if="output" :content="output" />
         <div v-else class="tool-empty-result">暂无输出</div>
       </ToolPanel>
     </template>
@@ -52,6 +52,7 @@
 </template>
 
 <script>
+import JsonViewer from '../components/JsonViewer.vue'
 import ToolPanel from '../components/ToolPanel.vue'
 import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { buildUrlQuery, parseUrlQuery } from '../utils/devTools'
@@ -60,6 +61,7 @@ import { applyToolResult, copyToolOutput } from './toolUi'
 export default {
   name: 'QueryTool',
   components: {
+    JsonViewer,
     ToolPanel,
     ToolWorkspace,
   },

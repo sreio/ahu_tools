@@ -3,12 +3,12 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 describe('application layout', () => {
-  it('lets tool cards fill the available main content width', () => {
+  it('removes legacy card-shell styles after workbench migration', () => {
     const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8')
-    const toolCardRule = css.match(/\.tool-card\.el-card\s*\{[^}]*\}/)?.[0] || ''
 
-    expect(toolCardRule).toContain('width: 100%')
-    expect(toolCardRule).not.toContain('max-width')
+    expect(css).not.toMatch(/\.tool-card\.el-card\s*\{/)
+    expect(css).not.toMatch(/\.result-container\.el-card\s*\{/)
+    expect(css).not.toMatch(/\.tool-header\s*\{/)
   })
 
   it('defines the workbench shell and independently scrolling tool panels', () => {
@@ -35,20 +35,32 @@ describe('application layout', () => {
 
   it('makes fill inputs expand inside the panel and scroll internally when content is long', () => {
     const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8')
+    const panelBodyRule = css.match(/\.tool-panel-body\s*\{[^}]*\}/)?.[0] || ''
     const fillItemRule = css.match(/\.tool-fill-input\s*\{[^}]*\}/)?.[0] || ''
     const fillContentRule = css.match(/\.tool-fill-input\s+\.el-form-item__content\s*\{[^}]*\}/)?.[0] || ''
     const textareaWrapperRule = css.match(/\.tool-fill-input\s+\.el-textarea\s*\{[^}]*\}/)?.[0] || ''
     const textareaRule = css.match(/\.tool-fill-input\s+\.el-textarea__inner\s*\{[^}]*\}/)?.[0] || ''
 
+    expect(panelBodyRule).toContain('display: flex')
+    expect(panelBodyRule).toContain('flex-direction: column')
     expect(fillItemRule).toContain('flex: 1')
-    expect(fillItemRule).toContain('min-height: 420px')
+    expect(fillItemRule).toContain('min-height: 0')
     expect(fillContentRule).toContain('min-height: 0')
     expect(fillContentRule).toContain('align-items: stretch')
-    expect(textareaWrapperRule).toContain('min-height: 420px')
-    expect(textareaRule).toContain('min-height: 420px !important')
+    expect(textareaWrapperRule).toContain('min-height: 0')
+    expect(textareaRule).toContain('min-height: 0 !important')
     expect(textareaRule).toContain('height: 100% !important')
     expect(textareaRule).toContain('overflow-y: auto')
     expect(textareaRule).toContain('resize: vertical')
+  })
+
+  it('lets empty result states fill the result panel instead of using a fixed height', () => {
+    const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8')
+    const emptyRule = css.match(/\.tool-empty-result\s*\{[^}]*\}/)?.[0] || ''
+
+    expect(emptyRule).toContain('flex: 1')
+    expect(emptyRule).toContain('min-height: 0')
+    expect(emptyRule).toContain('height: 100%')
   })
 
   it('keeps tool panel actions outside the scrolling body', () => {
@@ -74,15 +86,23 @@ describe('application layout', () => {
     expect(app).toContain(':active-tool="activeToolDefinition"')
   })
 
-  it('does not duplicate sidebar navigation and settings in the workbench toolbar', () => {
+  it('keeps tool switching in the sidebar instead of adding workbench search', () => {
     const app = readFileSync(resolve(__dirname, 'App.vue'), 'utf8')
     const shell = readFileSync(resolve(__dirname, 'components/WorkbenchShell.vue'), 'utf8')
     const workbenchUsage = app.match(/<WorkbenchShell[\s\S]*?<\/WorkbenchShell>/)?.[0] || ''
 
     expect(workbenchUsage).not.toContain(':tools="tools"')
     expect(workbenchUsage).not.toContain('@select-tool="selectTool"')
+    expect(shell).not.toContain('workbench-tool-search')
     expect(shell).not.toContain('<el-select')
+    expect(shell).not.toContain('filterable')
     expect(shell).not.toContain('搜索工具')
+    expect(shell).not.toContain("'select-tool'")
+  })
+
+  it('keeps app settings in the sidebar instead of duplicating them in the workbench toolbar', () => {
+    const shell = readFileSync(resolve(__dirname, 'components/WorkbenchShell.vue'), 'utf8')
+
     expect(shell).not.toContain('open-tool-order')
     expect(shell).not.toContain('open-updates')
     expect(shell).not.toContain('<el-popover')
@@ -108,6 +128,62 @@ describe('application layout', () => {
     expect(json).toContain('中文转 Unicode')
     expect(json).toContain('去除反斜杠')
     expect(json).not.toMatch(/<div class="action-row">[\s\S]*中文转 Unicode[\s\S]*去除反斜杠[\s\S]*<\/div>/)
+  })
+
+  it('centralizes JSON rendering in a foldable highlighted viewer', () => {
+    const viewer = readFileSync(resolve(__dirname, 'components/JsonViewer.vue'), 'utf8')
+    const treeNode = readFileSync(resolve(__dirname, 'components/JsonTreeNode.vue'), 'utf8')
+    const css = readFileSync(resolve(__dirname, 'style.css'), 'utf8')
+    const filenames = [
+      'tools/DecryptTool.vue',
+      'tools/H5DecryptTool.vue',
+      'tools/JsonTool.vue',
+      'tools/JwtTool.vue',
+      'tools/QueryTool.vue',
+      'tools/RegexTool.vue',
+      'tools/TimestampTool.vue',
+      'tools/RandomTool.vue',
+    ]
+
+    expect(viewer).toContain('name: \'JsonViewer\'')
+    expect(viewer).toContain("import JsonTreeNode from './JsonTreeNode.vue'")
+    expect(viewer).not.toContain('template: `')
+    expect(viewer).toContain('class="json-search"')
+    expect(viewer).toContain('searchTerm')
+    expect(viewer).toContain('matchCount')
+    expect(treeNode).toContain('name: \'JsonTreeNode\'')
+    expect(treeNode).toContain('class="json-toggle"')
+    expect(treeNode).toContain('json-token-key')
+    expect(treeNode).toContain('searchTerm')
+    expect(treeNode).toContain('visibleEntries')
+    expect(viewer).toContain('defaultExpandedDepth')
+    expect(css).toMatch(/\.json-viewer\s*\{/)
+    expect(css).toMatch(/\.json-viewer-toolbar\s*\{/)
+    expect(css).toMatch(/\.json-search\s*\{/)
+    expect(css).toMatch(/\.json-toggle\s*\{/)
+    expect(css).toMatch(/\.json-token-key\s*\{/)
+
+    for (const filename of filenames) {
+      const source = readFileSync(resolve(__dirname, filename), 'utf8')
+      expect(source).toContain("import JsonViewer from '../components/JsonViewer.vue'")
+      expect(source).toContain('JsonViewer')
+    }
+  })
+
+  it('uses a JSON editor panel for JSON input fields', () => {
+    const editor = readFileSync(resolve(__dirname, 'components/JsonEditorPanel.vue'), 'utf8')
+    const json = readFileSync(resolve(__dirname, 'tools/JsonTool.vue'), 'utf8')
+    const jwt = readFileSync(resolve(__dirname, 'tools/JwtTool.vue'), 'utf8')
+
+    expect(editor).toContain('name: \'JsonEditorPanel\'')
+    expect(editor).toContain('JsonViewer')
+    expect(editor).toContain('modelValue')
+    expect(json).toContain("import JsonEditorPanel from '../components/JsonEditorPanel.vue'")
+    expect(json).toContain('<JsonEditorPanel')
+    expect(jwt).toContain("import JsonEditorPanel from '../components/JsonEditorPanel.vue'")
+    expect(jwt.match(/<JsonEditorPanel/g)?.length).toBeGreaterThanOrEqual(2)
+    expect(jwt).not.toContain('<el-input v-model="signHeader" type="textarea"')
+    expect(jwt).not.toContain('<el-input v-model="signPayload" type="textarea"')
   })
 
   it('migrates simple tools to the workbench panel pattern', () => {
@@ -149,5 +225,15 @@ describe('application layout', () => {
     expect(query).toContain('<ToolPanel title="输出"')
     expect(query).toContain('@click="removeRow(index)"')
     expect(query).not.toContain('<el-card class="tool-card"')
+  })
+
+  it('migrates update checks to the workbench panel pattern', () => {
+    const update = readFileSync(resolve(__dirname, 'tools/UpdateTool.vue'), 'utf8')
+
+    expect(update).toContain('<ToolWorkspace>')
+    expect(update).toContain('<ToolPanel title="检查"')
+    expect(update).toContain('<ToolPanel title="版本信息"')
+    expect(update).not.toContain('<el-card class="tool-card"')
+    expect(update).not.toContain('class="result-container')
   })
 })

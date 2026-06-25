@@ -46,7 +46,7 @@
         <el-alert v-if="error" :title="error" type="error" show-icon />
         <el-tabs v-else-if="result" v-model="activeTab">
           <el-tab-pane label="JSON格式" name="json">
-            <pre class="result-json">{{ formattedJson }}</pre>
+            <JsonViewer :content="formattedJson" />
           </el-tab-pane>
           <el-tab-pane label="原始数据" name="raw">
             <pre class="result-json">{{ result.raw }}</pre>
@@ -59,6 +59,7 @@
 </template>
 
 <script>
+import JsonViewer from '../components/JsonViewer.vue'
 import ToolPanel from '../components/ToolPanel.vue'
 import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { Decrypt } from '../services/wailsApi'
@@ -67,6 +68,7 @@ import { copyToolOutput, emitToolAction, summarizeText } from './toolUi'
 export default {
   name: 'DecryptTool',
   components: {
+    JsonViewer,
     ToolPanel,
     ToolWorkspace,
   },

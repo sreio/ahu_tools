@@ -46,10 +46,10 @@
                 </el-select>
               </el-form-item>
               <el-form-item label="Header JSON">
-                <el-input v-model="signHeader" type="textarea" :rows="5" />
+                <JsonEditorPanel v-model="signHeader" :rows="5" preview-title="Header 预览" />
               </el-form-item>
               <el-form-item label="Payload JSON">
-                <el-input v-model="signPayload" type="textarea" :rows="7" />
+                <JsonEditorPanel v-model="signPayload" :rows="7" preview-title="Payload 预览" />
               </el-form-item>
               <el-form-item label="Secret">
                 <el-input v-model="signSecret" type="password" show-password placeholder="请输入 HMAC secret" />
@@ -69,7 +69,7 @@
         <div v-if="activeTab === 'decode' && (header || payload)" class="jwt-result-grid">
           <el-card class="nested-result-card" shadow="never">
             <template #header>Header</template>
-            <pre class="result-json">{{ header }}</pre>
+            <JsonViewer :content="header" />
             <div class="result-actions">
               <el-button size="small" @click="copyText(header, 'JWT Header')">复制 Header</el-button>
             </div>
@@ -77,7 +77,7 @@
 
           <el-card class="nested-result-card" shadow="never">
             <template #header>Payload</template>
-            <pre class="result-json">{{ payload }}</pre>
+            <JsonViewer :content="payload" />
             <div class="result-actions">
               <el-button size="small" @click="copyText(payload, 'JWT Payload')">复制 Payload</el-button>
             </div>
@@ -123,6 +123,8 @@
 </template>
 
 <script>
+import JsonEditorPanel from '../components/JsonEditorPanel.vue'
+import JsonViewer from '../components/JsonViewer.vue'
 import ToolPanel from '../components/ToolPanel.vue'
 import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { decodeJwt, signJwt, verifyJwt } from '../utils/devTools'
@@ -134,6 +136,8 @@ const defaultSignPayload = '{\n  "sub": "123",\n  "name": "AhuTools",\n  "iat": 
 export default {
   name: 'JwtTool',
   components: {
+    JsonEditorPanel,
+    JsonViewer,
     ToolPanel,
     ToolWorkspace,
   },

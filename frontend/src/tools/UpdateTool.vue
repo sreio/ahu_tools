@@ -1,55 +1,80 @@
 <template>
-  <el-card class="tool-card" shadow="never">
-    <template #header>
-      <div class="tool-header">
-        <div>
-          <h2>应用更新</h2>
-          <p>从 GitHub Release 检查最新版本，并下载当前平台安装包/可执行产物。</p>
+  <ToolWorkspace>
+    <template #input>
+      <ToolPanel title="检查" description="从 GitHub Release 获取当前平台可用版本。">
+        <template #actions>
+          <el-button type="primary" :loading="checking" @click="checkUpdate">
+            检查更新
+          </el-button>
+        </template>
+
+        <div class="update-summary">
+          <strong>当前版本</strong>
+          <span>{{ currentVersion }}</span>
         </div>
-        <el-button type="primary" :loading="checking" @click="checkUpdate">
-          检查更新
-        </el-button>
-      </div>
+        <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
+        <el-alert v-if="message" :title="message" type="info" show-icon :closable="false" class="tool-feedback" />
+
+        <template #footer>
+          <span>{{ checking ? '正在检查更新' : '更新检查' }}</span>
+        </template>
+      </ToolPanel>
     </template>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon class="tool-feedback" />
-    <el-alert v-if="message" :title="message" type="info" show-icon :closable="false" class="tool-feedback" />
+    <template #result>
+      <ToolPanel title="版本信息" :description="info ? 'Release 与安装包信息。' : '检查后显示版本详情。'">
+        <template #actions>
+          <el-button
+            type="primary"
+            :disabled="!info?.asset"
+            :loading="downloading || installing"
+            @click="downloadUpdate"
+          >
+            下载并安装
+          </el-button>
+        </template>
 
-    <el-card v-if="info" class="result-container update-info" shadow="never">
-      <div v-if="info.asset" class="update-action-bar">
-        <div>
-          <strong>{{ info.asset.name }}</strong>
-          <span>{{ formatSize(info.asset.size) }}</span>
+        <div v-if="info" class="update-info">
+          <div v-if="info.asset" class="update-action-bar">
+            <div>
+              <strong>{{ info.asset.name }}</strong>
+              <span>{{ formatSize(info.asset.size) }}</span>
+            </div>
+          </div>
+
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="当前版本">{{ info.currentVersion }}</el-descriptions-item>
+            <el-descriptions-item v-if="info.latestVersion" label="最新版本">{{ info.latestVersion }}</el-descriptions-item>
+            <el-descriptions-item label="当前平台">{{ info.platform }}</el-descriptions-item>
+            <el-descriptions-item v-if="info.publishedAt" label="发布时间">{{ info.publishedAt }}</el-descriptions-item>
+            <el-descriptions-item v-if="info.releaseUrl" label="Release">
+              <a :href="info.releaseUrl" target="_blank">{{ info.releaseName || info.releaseUrl }}</a>
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <section v-if="info.releaseNotes" class="update-release-notes">
+            <h4>Release Notes</h4>
+            <pre class="result-json">{{ info.releaseNotes }}</pre>
+          </section>
         </div>
-        <el-button type="primary" :loading="downloading || installing" @click="downloadUpdate">
-          下载并安装
-        </el-button>
-      </div>
-
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="当前版本">{{ info.currentVersion }}</el-descriptions-item>
-        <el-descriptions-item v-if="info.latestVersion" label="最新版本">{{ info.latestVersion }}</el-descriptions-item>
-        <el-descriptions-item label="当前平台">{{ info.platform }}</el-descriptions-item>
-        <el-descriptions-item v-if="info.publishedAt" label="发布时间">{{ info.publishedAt }}</el-descriptions-item>
-        <el-descriptions-item v-if="info.releaseUrl" label="Release">
-          <a :href="info.releaseUrl" target="_blank">{{ info.releaseName || info.releaseUrl }}</a>
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <el-card v-if="info.releaseNotes" class="nested-result-card" shadow="never">
-        <template #header>Release Notes</template>
-        <pre class="result-json">{{ info.releaseNotes }}</pre>
-      </el-card>
-    </el-card>
-  </el-card>
+        <div v-else class="tool-empty-result">暂无版本信息</div>
+      </ToolPanel>
+    </template>
+  </ToolWorkspace>
 </template>
 
 <script>
 import { ElMessageBox } from 'element-plus'
+import ToolPanel from '../components/ToolPanel.vue'
+import ToolWorkspace from '../components/ToolWorkspace.vue'
 import { CheckForUpdate, DownloadUpdate, InstallDownloadedUpdate } from '../services/wailsApi'
 
 export default {
   name: 'UpdateTool',
+  components: {
+    ToolPanel,
+    ToolWorkspace,
+  },
   props: {
     initialInfo: {
       type: Object,
@@ -57,6 +82,11 @@ export default {
     },
   },
   emits: ['toast', 'checked'],
+  computed: {
+    currentVersion() {
+      return this.info?.currentVersion || '读取中'
+    },
+  },
   data() {
     return {
       checking: false,
