@@ -57,11 +57,11 @@ jobs:
             artifact-suffix: windows-amd64.exe
           - name: macOS AMD64
             platform: darwin/amd64
-            os: macos-latest
+            os: macos-15
             artifact-suffix: darwin-amd64.dmg
           - name: macOS ARM64
             platform: darwin/arm64
-            os: macos-latest
+            os: macos-15
             artifact-suffix: darwin-arm64.dmg
 
     steps:
