@@ -48,6 +48,14 @@
 
           <section class="image-generator-section">
             <h4>背景</h4>
+            <el-form-item label="背景来源">
+              <el-radio-group v-model="backgroundMode">
+                <el-radio-button label="theme">主题</el-radio-button>
+                <el-radio-button label="color">纯色</el-radio-button>
+                <el-radio-button label="image" :disabled="!backgroundImage">背景图</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+
             <el-row :gutter="16">
               <el-col :xs="24" :md="12">
                 <el-form-item label="背景色">
@@ -65,6 +73,19 @@
                 </el-form-item>
               </el-col>
             </el-row>
+
+            <div v-if="backgroundMode === 'theme'" class="image-theme-controls">
+              <el-form-item label="主题风格">
+                <el-select v-model="themeType" class="full-width">
+                  <el-option v-for="item in themes" :key="item.key" :label="item.label" :value="item.key" />
+                </el-select>
+              </el-form-item>
+              <div class="image-theme-actions">
+                <el-button @click="randomizeTheme">随机一次</el-button>
+                <el-checkbox v-model="themeLocked" :true-value="true" :false-value="false">锁定样式</el-checkbox>
+                <span>{{ currentThemeLabel }} · #{{ themeSeed }}</span>
+              </div>
+            </div>
 
             <div class="image-upload-row">
               <el-upload :auto-upload="false" :show-file-list="false" accept="image/*" @change="handleBackgroundChange">
@@ -244,13 +265,16 @@
 import ToolPanel from '../components/ToolPanel.vue'
 import ToolWorkspace from '../components/ToolWorkspace.vue'
 import {
+  buildThemeConfig,
   buildImageFileName,
   calculateBackgroundRect,
   calculateTextBlock,
   calculateWatermarkRect,
+  createThemeSeed,
   formatBytes,
   getFormatConfig,
   getOutputDimensions,
+  imageThemes,
   imageFormats,
   normalizeQuality,
   validateCrop,
@@ -259,6 +283,10 @@ import {
 import { emitToolAction } from './toolUi'
 
 function createDefaultState() {
+  const themeType = 'aurora'
+  const themeSeed = createThemeSeed()
+  const themeConfig = buildThemeConfig(themeType, themeSeed)
+
   return {
     formats: imageFormats,
     width: 800,
@@ -267,12 +295,17 @@ function createDefaultState() {
     quality: 0.9,
     transparentBackground: false,
     backgroundColor: '#ffffff',
+    backgroundMode: 'theme',
     backgroundFit: 'cover',
     backgroundImage: null,
     backgroundImageName: '',
+    themes: imageThemes,
+    themeType,
+    themeSeed,
+    themeLocked: false,
     text: 'AhuTools',
     fontSize: 48,
-    textColor: '#111827',
+    textColor: themeConfig.textColor,
     textBold: true,
     textOpacity: 1,
     textAlign: 'center',
@@ -320,6 +353,12 @@ export default {
   computed: {
     qualityControlLabel() {
       return this.format === 'png' ? '压缩质量（PNG 无损，不适用）' : '压缩质量'
+    },
+    currentThemeConfig() {
+      return buildThemeConfig(this.themeType, this.themeSeed)
+    },
+    currentThemeLabel() {
+      return this.currentThemeConfig.label
     },
     qualityPercent: {
       get() {
@@ -399,6 +438,7 @@ export default {
       try {
         this.backgroundImage = await this.loadSelectedImage(raw)
         this.backgroundImageName = raw.name
+        this.backgroundMode = 'image'
         this.error = ''
       } catch {
         this.backgroundImage = null
@@ -423,11 +463,17 @@ export default {
     clearBackgroundImage() {
       this.backgroundImage = null
       this.backgroundImageName = ''
+      if (this.backgroundMode === 'image') this.backgroundMode = 'theme'
     },
     clearWatermarkImage() {
       this.watermarkImage = null
       this.watermarkImageName = ''
       this.watermarkEnabled = false
+    },
+    randomizeTheme() {
+      this.backgroundMode = 'theme'
+      this.themeSeed = createThemeSeed()
+      this.textColor = this.currentThemeConfig.textColor
     },
     drawBackground(ctx, canvasSize, formatConfig) {
       if (!this.transparentBackground || !formatConfig.supportsTransparency) {
@@ -435,7 +481,12 @@ export default {
         ctx.fillRect(0, 0, canvasSize.width, canvasSize.height)
       }
 
-      if (!this.backgroundImage) return
+      if (this.backgroundMode === 'theme') {
+        this.drawThemeBackground(ctx, canvasSize)
+        return
+      }
+
+      if (!this.backgroundImage || this.backgroundMode !== 'image') return
 
       if (this.backgroundFit === 'tile') {
         const pattern = ctx.createPattern(this.backgroundImage, 'repeat')
@@ -448,6 +499,148 @@ export default {
 
       const rect = calculateBackgroundRect(this.backgroundFit, this.backgroundImage, canvasSize)
       ctx.drawImage(this.backgroundImage, rect.sx, rect.sy, rect.sWidth, rect.sHeight, rect.dx, rect.dy, rect.dWidth, rect.dHeight)
+    },
+    drawThemeBackground(ctx, canvasSize) {
+      const theme = this.currentThemeConfig
+      const { width, height } = canvasSize
+      const diagonal = Math.hypot(width, height)
+      const angle = (theme.gradientAngle * Math.PI) / 180
+      const x = Math.cos(angle) * diagonal
+      const y = Math.sin(angle) * diagonal
+      const gradient = ctx.createLinearGradient(width / 2 - x / 2, height / 2 - y / 2, width / 2 + x / 2, height / 2 + y / 2)
+
+      theme.palette.forEach((color, index) => {
+        gradient.addColorStop(index / Math.max(theme.palette.length - 1, 1), color)
+      })
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, width, height)
+
+      if (theme.family === 'grid') {
+        this.drawThemeGrid(ctx, canvasSize, theme)
+      } else if (theme.family === 'paper') {
+        this.drawThemePaper(ctx, canvasSize, theme)
+      } else if (theme.family === 'magazine') {
+        this.drawThemeMagazine(ctx, canvasSize, theme)
+      } else {
+        this.drawThemeShapes(ctx, canvasSize, theme)
+      }
+    },
+    drawThemeShapes(ctx, canvasSize, theme) {
+      const { width, height } = canvasSize
+      const accentColors = theme.palette.slice(1)
+      theme.shapes.forEach((shape, index) => {
+        const size = Math.max(width, height) * shape.size
+        const x = shape.x * width
+        const y = shape.y * height
+        ctx.save()
+        ctx.globalAlpha = theme.family === 'neon' ? Math.min(shape.opacity + 0.12, 0.42) : shape.opacity
+        ctx.fillStyle = accentColors[index % accentColors.length]
+        ctx.strokeStyle = accentColors[(index + 1) % accentColors.length]
+        ctx.lineWidth = Math.max(1, size * 0.025)
+        ctx.translate(x, y)
+        ctx.rotate(shape.rotation)
+
+        if (theme.family === 'glass') {
+          this.drawRoundedRectPath(ctx, -size / 2, -size / 3, size, size * 0.66, size * 0.12)
+          ctx.fill()
+          ctx.globalAlpha = 0.35
+          ctx.stroke()
+        } else if (theme.family === 'geometry' || shape.variant % 3 === 0) {
+          ctx.beginPath()
+          ctx.moveTo(0, -size / 2)
+          ctx.lineTo(size / 2, size / 2)
+          ctx.lineTo(-size / 2, size / 2)
+          ctx.closePath()
+          ctx.fill()
+        } else {
+          const radial = ctx.createRadialGradient(0, 0, 0, 0, 0, size)
+          radial.addColorStop(0, accentColors[index % accentColors.length])
+          radial.addColorStop(1, 'rgba(255,255,255,0)')
+          ctx.fillStyle = radial
+          ctx.beginPath()
+          ctx.arc(0, 0, size, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        ctx.restore()
+      })
+
+      if (theme.family === 'neon') {
+        this.drawNeonLines(ctx, canvasSize, theme)
+      }
+    },
+    drawThemeGrid(ctx, canvasSize, theme) {
+      const { width, height } = canvasSize
+      const step = Math.max(28, Math.min(width, height) / 12)
+      ctx.save()
+      ctx.globalAlpha = 0.18
+      ctx.strokeStyle = theme.palette[2]
+      ctx.lineWidth = 1
+      for (let x = 0; x <= width; x += step) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, height)
+        ctx.stroke()
+      }
+      for (let y = 0; y <= height; y += step) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(width, y)
+        ctx.stroke()
+      }
+      ctx.restore()
+      this.drawThemeShapes(ctx, canvasSize, theme)
+    },
+    drawThemePaper(ctx, canvasSize, theme) {
+      const { width, height } = canvasSize
+      ctx.save()
+      theme.shapes.forEach((shape, index) => {
+        ctx.globalAlpha = 0.05 + (index % 5) * 0.01
+        ctx.fillStyle = theme.palette[index % theme.palette.length]
+        ctx.beginPath()
+        ctx.arc(shape.x * width, shape.y * height, Math.max(width, height) * shape.size * 0.18, 0, Math.PI * 2)
+        ctx.fill()
+      })
+      ctx.restore()
+    },
+    drawThemeMagazine(ctx, canvasSize, theme) {
+      const { width, height } = canvasSize
+      ctx.save()
+      theme.shapes.slice(0, 6).forEach((shape, index) => {
+        ctx.globalAlpha = 0.12 + index * 0.02
+        ctx.fillStyle = theme.palette[(index + 1) % theme.palette.length]
+        ctx.translate(shape.x * width, shape.y * height)
+        ctx.rotate(shape.rotation)
+        ctx.fillRect(-width * 0.18, -height * 0.08, width * (0.24 + shape.size), height * 0.16)
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+      })
+      ctx.restore()
+    },
+    drawNeonLines(ctx, canvasSize, theme) {
+      const { width, height } = canvasSize
+      ctx.save()
+      ctx.globalAlpha = 0.42
+      ctx.lineWidth = Math.max(2, width * 0.004)
+      theme.shapes.slice(0, 8).forEach((shape, index) => {
+        ctx.strokeStyle = theme.palette[(index + 2) % theme.palette.length]
+        ctx.beginPath()
+        ctx.moveTo(shape.x * width, shape.y * height)
+        ctx.lineTo(((shape.x + 0.28) % 1) * width, ((shape.y + 0.18) % 1) * height)
+        ctx.stroke()
+      })
+      ctx.restore()
+    },
+    drawRoundedRectPath(ctx, x, y, width, height, radius) {
+      ctx.beginPath()
+      ctx.moveTo(x + radius, y)
+      ctx.lineTo(x + width - radius, y)
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius)
+      ctx.lineTo(x + width, y + height - radius)
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
+      ctx.lineTo(x + radius, y + height)
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius)
+      ctx.lineTo(x, y + radius)
+      ctx.quadraticCurveTo(x, y, x + radius, y)
+      ctx.closePath()
     },
     drawText(ctx, canvasSize) {
       const lines = String(this.text || '').split('\n').filter((line) => line.length)
@@ -500,6 +693,11 @@ export default {
           height: this.cropHeight,
         }, sizeResult.value)
         if (!cropResult.ok) return this.failGeneration(cropResult.error)
+
+        if (this.backgroundMode === 'theme' && this.themeType === 'random' && !this.themeLocked) {
+          this.themeSeed = createThemeSeed()
+          this.textColor = this.currentThemeConfig.textColor
+        }
 
         const canvas = document.createElement('canvas')
         canvas.width = sizeResult.value.width
@@ -616,7 +814,11 @@ export default {
         quality: this.quality,
         transparentBackground: this.transparentBackground,
         backgroundColor: this.backgroundColor,
+        backgroundMode: this.backgroundMode,
         backgroundFit: this.backgroundFit,
+        themeType: this.themeType,
+        themeSeed: this.themeSeed,
+        themeLocked: this.themeLocked,
         text: this.text,
         fontSize: this.fontSize,
         textColor: this.textColor,
@@ -654,7 +856,11 @@ export default {
         quality: snapshot.quality || 0.9,
         transparentBackground: Boolean(snapshot.transparentBackground),
         backgroundColor: snapshot.backgroundColor || '#ffffff',
+        backgroundMode: snapshot.backgroundMode || 'theme',
         backgroundFit: snapshot.backgroundFit || 'cover',
+        themeType: snapshot.themeType || 'aurora',
+        themeSeed: snapshot.themeSeed || createThemeSeed(),
+        themeLocked: Boolean(snapshot.themeLocked),
         text: snapshot.text || '',
         fontSize: snapshot.fontSize || 48,
         textColor: snapshot.textColor || '#111827',

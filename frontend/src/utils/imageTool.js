@@ -7,6 +7,94 @@ export const imageFormats = [
   { key: 'webp', label: 'WebP', mime: 'image/webp', extension: 'webp', supportsQuality: true, supportsTransparency: true },
 ]
 
+const themeDefinitions = [
+  {
+    key: 'aurora',
+    label: '极光渐变',
+    family: 'aurora',
+    palettes: [
+      ['#0f172a', '#2563eb', '#22d3ee', '#a78bfa'],
+      ['#111827', '#7c3aed', '#06b6d4', '#f0f9ff'],
+      ['#ecfeff', '#38bdf8', '#8b5cf6', '#fdf4ff'],
+    ],
+  },
+  {
+    key: 'glass',
+    label: '玻璃拟态',
+    family: 'glass',
+    palettes: [
+      ['#f8fafc', '#dbeafe', '#c4b5fd', '#ffffff'],
+      ['#eff6ff', '#bae6fd', '#ddd6fe', '#f8fafc'],
+      ['#0f172a', '#1e40af', '#67e8f9', '#f8fafc'],
+    ],
+  },
+  {
+    key: 'paper',
+    label: '高级纸感',
+    family: 'paper',
+    palettes: [
+      ['#f8f5ef', '#e7dccb', '#a3b18a', '#334155'],
+      ['#faf7f0', '#e2e8f0', '#d6ccc2', '#475569'],
+      ['#f9fafb', '#e5e7eb', '#cbd5e1', '#111827'],
+    ],
+  },
+  {
+    key: 'tech-grid',
+    label: '科技网格',
+    family: 'grid',
+    palettes: [
+      ['#020617', '#0f172a', '#38bdf8', '#22c55e'],
+      ['#030712', '#1e1b4b', '#60a5fa', '#a78bfa'],
+      ['#08111f', '#0e7490', '#67e8f9', '#f8fafc'],
+    ],
+  },
+  {
+    key: 'fresh-geometry',
+    label: '清爽几何',
+    family: 'geometry',
+    palettes: [
+      ['#f8fafc', '#bfdbfe', '#99f6e4', '#fef3c7'],
+      ['#ecfeff', '#bae6fd', '#bbf7d0', '#ffffff'],
+      ['#fff7ed', '#fed7aa', '#bfdbfe', '#f8fafc'],
+    ],
+  },
+  {
+    key: 'neon',
+    label: '霓虹流光',
+    family: 'neon',
+    palettes: [
+      ['#020617', '#111827', '#f472b6', '#22d3ee'],
+      ['#0f1020', '#312e81', '#a3e635', '#38bdf8'],
+      ['#050816', '#581c87', '#fb7185', '#60a5fa'],
+    ],
+  },
+  {
+    key: 'magazine',
+    label: '杂志封面',
+    family: 'magazine',
+    palettes: [
+      ['#f8fafc', '#111827', '#e11d48', '#facc15'],
+      ['#fff7ed', '#1f2937', '#2563eb', '#fb923c'],
+      ['#f5f5f4', '#0f172a', '#16a34a', '#eab308'],
+    ],
+  },
+  {
+    key: 'natural-light',
+    label: '自然柔光',
+    family: 'natural',
+    palettes: [
+      ['#f0fdf4', '#bbf7d0', '#7dd3fc', '#ffffff'],
+      ['#fefce8', '#fde68a', '#bae6fd', '#f8fafc'],
+      ['#ecfdf5', '#a7f3d0', '#bfdbfe', '#14532d'],
+    ],
+  },
+]
+
+export const imageThemes = [
+  { key: 'random', label: '随机' },
+  ...themeDefinitions.map(({ key, label }) => ({ key, label })),
+]
+
 function success(value) {
   return { ok: true, value }
 }
@@ -26,6 +114,100 @@ function validateIntegerRange(value, min, max, label) {
     return failure(`${label}必须是 ${min}..${max} 的整数`)
   }
   return success(number)
+}
+
+function createSeededRandom(seed) {
+  let state = Number(seed) >>> 0
+  if (!state) state = 1
+
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0
+    return state / 4294967296
+  }
+}
+
+function pickFrom(values, random) {
+  return values[Math.floor(random() * values.length)]
+}
+
+function hexToRgb(hex) {
+  const normalized = String(hex).replace('#', '')
+  const value = parseInt(normalized.length === 3 ? normalized.split('').map((char) => char + char).join('') : normalized, 16)
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  }
+}
+
+function getRelativeLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  const channels = [r, g, b].map((channel) => {
+    const value = channel / 255
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+}
+
+function createThemeShapes(family, random) {
+  const countByFamily = {
+    aurora: 9,
+    glass: 11,
+    paper: 34,
+    grid: 30,
+    geometry: 16,
+    neon: 18,
+    magazine: 10,
+    natural: 12,
+  }
+  const count = countByFamily[family] || 12
+
+  return Array.from({ length: count }, (_, index) => ({
+    id: index,
+    x: Number(random().toFixed(4)),
+    y: Number(random().toFixed(4)),
+    size: Number((0.08 + random() * 0.32).toFixed(4)),
+    rotation: Number((random() * Math.PI * 2).toFixed(4)),
+    opacity: Number((0.06 + random() * 0.28).toFixed(4)),
+    variant: Math.floor(random() * 4),
+  }))
+}
+
+export function createThemeSeed() {
+  if (globalThis.crypto?.getRandomValues) {
+    const values = new Uint32Array(1)
+    globalThis.crypto.getRandomValues(values)
+    return values[0] || 1
+  }
+  return Math.floor(Math.random() * 4294967295) || 1
+}
+
+export function getThemeDefinition(themeKey) {
+  return themeDefinitions.find((item) => item.key === themeKey) || null
+}
+
+export function pickReadableTextColor(palette) {
+  const luminance = palette.reduce((sum, color) => sum + getRelativeLuminance(color), 0) / Math.max(palette.length, 1)
+  return luminance < 0.45 ? '#f8fafc' : '#111827'
+}
+
+export function buildThemeConfig(themeKey, seed = createThemeSeed()) {
+  const baseRandom = createSeededRandom(seed)
+  const candidates = themeDefinitions
+  const definition = themeKey === 'random' ? pickFrom(candidates, baseRandom) : getThemeDefinition(themeKey) || getThemeDefinition('aurora')
+  const random = createSeededRandom(`${definition.key}:${seed}`.split('').reduce((sum, char) => sum + char.charCodeAt(0), Number(seed) || 1))
+  const palette = pickFrom(definition.palettes, random)
+
+  return {
+    key: definition.key,
+    label: definition.label,
+    family: definition.family,
+    seed: Number(seed) || 1,
+    palette,
+    textColor: pickReadableTextColor(palette),
+    gradientAngle: Number((random() * 360).toFixed(2)),
+    shapes: createThemeShapes(definition.family, random),
+  }
 }
 
 export function validateImageSize(width, height) {

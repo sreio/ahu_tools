@@ -768,6 +768,24 @@ body {
   align-items: center;
 }
 
+.image-theme-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.image-theme-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.image-theme-actions span {
+  overflow-wrap: anywhere;
+}
+
 .image-upload-summary {
   display: flex;
   min-width: 0;
@@ -838,6 +856,11 @@ body {
 
   .image-upload-row {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .image-theme-actions {
+    align-items: flex-start;
     flex-direction: column;
   }
 

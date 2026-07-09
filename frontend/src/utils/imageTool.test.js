@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildImageFileName,
+  buildThemeConfig,
   calculateBackgroundRect,
   calculateTextBlock,
   calculateWatermarkRect,
+  createThemeSeed,
   formatBytes,
   getFormatConfig,
   getOutputDimensions,
+  getThemeDefinition,
+  imageThemes,
   normalizeQuality,
+  pickReadableTextColor,
   validateCrop,
   validateImageSize,
 } from './imageTool'
@@ -133,5 +138,34 @@ describe('imageTool utilities', () => {
   it('builds stable output filenames', () => {
     const date = new Date('2026-07-09T08:06:05.000Z')
     expect(buildImageFileName('jpeg', date)).toBe('ahu-tools-image-20260709-080605.jpg')
+  })
+
+  it('defines curated theme options', () => {
+    expect(imageThemes.map((item) => item.key)).toEqual([
+      'random',
+      'aurora',
+      'glass',
+      'paper',
+      'tech-grid',
+      'fresh-geometry',
+      'neon',
+      'magazine',
+      'natural-light',
+    ])
+    expect(getThemeDefinition('aurora').label).toBe('极光渐变')
+    expect(getThemeDefinition('missing')).toBeNull()
+  })
+
+  it('builds deterministic theme configs from seed', () => {
+    expect(createThemeSeed()).toBeGreaterThan(0)
+    expect(buildThemeConfig('aurora', 12345)).toEqual(buildThemeConfig('aurora', 12345))
+    expect(buildThemeConfig('aurora', 12345).shapes).not.toEqual(buildThemeConfig('aurora', 54321).shapes)
+    expect(buildThemeConfig('random', 12345).key).not.toBe('random')
+    expect(buildThemeConfig('missing', 12345).key).toBe('aurora')
+  })
+
+  it('picks readable text colors from palette brightness', () => {
+    expect(pickReadableTextColor(['#0f172a', '#1e293b'])).toBe('#f8fafc')
+    expect(pickReadableTextColor(['#f8fafc', '#e0f2fe'])).toBe('#111827')
   })
 })
