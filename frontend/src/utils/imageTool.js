@@ -210,6 +210,58 @@ export function buildThemeConfig(themeKey, seed = createThemeSeed()) {
   }
 }
 
+export function buildImageAutoPreviewSignature(state) {
+  return JSON.stringify({
+    width: state.width,
+    height: state.height,
+    format: state.format,
+    quality: state.quality,
+    transparentBackground: state.transparentBackground,
+    backgroundColor: state.backgroundColor,
+    backgroundMode: state.backgroundMode,
+    backgroundFit: state.backgroundFit,
+    backgroundImageName: state.backgroundImageName || '',
+    themeType: state.themeType,
+    themeSeed: state.themeSeed,
+    text: state.text,
+    fontSize: state.fontSize,
+    textColor: state.textColor,
+    textBold: state.textBold,
+    textOpacity: state.textOpacity,
+    textAlign: state.textAlign,
+    textVerticalAlign: state.textVerticalAlign,
+    watermarkEnabled: state.watermarkEnabled,
+    watermarkImageName: state.watermarkImageName || '',
+    watermarkPosition: state.watermarkPosition,
+    watermarkOpacity: state.watermarkOpacity,
+    watermarkScale: state.watermarkScale,
+    watermarkMargin: state.watermarkMargin,
+    cropEnabled: state.cropEnabled,
+    cropX: state.cropX,
+    cropY: state.cropY,
+    cropWidth: state.cropWidth,
+    cropHeight: state.cropHeight,
+  })
+}
+
+export function createAutoPreviewScheduler(callback, delay = 220) {
+  let timer = null
+
+  return {
+    schedule() {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        timer = null
+        callback()
+      }, delay)
+    },
+    dispose() {
+      if (timer) clearTimeout(timer)
+      timer = null
+    },
+  }
+}
+
 export function validateImageSize(width, height) {
   const widthResult = validateIntegerRange(width, 1, maxDimension, '宽度')
   if (!widthResult.ok) return widthResult

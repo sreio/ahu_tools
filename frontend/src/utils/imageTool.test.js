@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  buildImageAutoPreviewSignature,
   buildImageFileName,
   buildThemeConfig,
   calculateBackgroundRect,
   calculateTextBlock,
   calculateWatermarkRect,
+  createAutoPreviewScheduler,
   createThemeSeed,
   formatBytes,
   getFormatConfig,
@@ -167,5 +169,37 @@ describe('imageTool utilities', () => {
   it('picks readable text colors from palette brightness', () => {
     expect(pickReadableTextColor(['#0f172a', '#1e293b'])).toBe('#f8fafc')
     expect(pickReadableTextColor(['#f8fafc', '#e0f2fe'])).toBe('#111827')
+  })
+
+  it('builds an auto preview signature from image-affecting options', () => {
+    const state = {
+      width: 800,
+      height: 450,
+      format: 'png',
+      quality: 0.9,
+      text: 'AhuTools',
+      outputBlob: new Blob(['ignored']),
+    }
+
+    const base = buildImageAutoPreviewSignature(state)
+    expect(buildImageAutoPreviewSignature({ ...state, text: 'Changed' })).not.toBe(base)
+    expect(buildImageAutoPreviewSignature({ ...state, width: 1200 })).not.toBe(base)
+    expect(buildImageAutoPreviewSignature({ ...state, outputBlob: new Blob(['ignored too']) })).toBe(base)
+  })
+
+  it('debounces auto preview refreshes', () => {
+    vi.useFakeTimers()
+    const run = vi.fn()
+    const scheduler = createAutoPreviewScheduler(run, 120)
+
+    scheduler.schedule()
+    scheduler.schedule()
+    vi.advanceTimersByTime(119)
+    expect(run).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(run).toHaveBeenCalledTimes(1)
+
+    scheduler.dispose()
+    vi.useRealTimers()
   })
 })

@@ -14,6 +14,7 @@ export {
   InstallDownloadedUpdate,
   RecordToolHistory,
   SaveConfig,
+  SaveGeneratedImage,
   SaveH5DecryptConfig,
   SaveToolOrder,
 } from '../../wailsjs/go/main/App'

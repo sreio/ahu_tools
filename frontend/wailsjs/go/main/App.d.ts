@@ -34,6 +34,8 @@ export function RecordToolHistory(arg1:main.ToolHistory):Promise<void>;
 
 export function SaveConfig(arg1:main.Config):Promise<void>;
 
+export function SaveGeneratedImage(arg1:main.GeneratedImageSaveRequest):Promise<main.GeneratedImageSaveResponse>;
+
 export function SaveH5DecryptConfig(arg1:main.H5DecryptConfig):Promise<void>;
 
 export function SaveToolOrder(arg1:Array<string>):Promise<void>;

@@ -3,8 +3,8 @@
     <template #input>
       <ToolPanel title="图片配置" description="生成指定尺寸、格式、文字、背景和水印的图片。">
         <template #actions>
-          <el-button type="primary" @click="generateImage">生成预览</el-button>
-          <el-button :disabled="!outputBlob" @click="downloadImage">下载图片</el-button>
+          <el-button type="primary" :loading="isGeneratingPreview" @click="generateImage">生成预览</el-button>
+          <el-button :disabled="!outputBlob || savingImage" :loading="savingImage" @click="downloadImage">下载图片</el-button>
           <el-button @click="resetForm">重置</el-button>
         </template>
 
@@ -264,12 +264,15 @@
 <script>
 import ToolPanel from '../components/ToolPanel.vue'
 import ToolWorkspace from '../components/ToolWorkspace.vue'
+import { SaveGeneratedImage } from '../services/wailsApi'
 import {
+  buildImageAutoPreviewSignature,
   buildThemeConfig,
   buildImageFileName,
   calculateBackgroundRect,
   calculateTextBlock,
   calculateWatermarkRect,
+  createAutoPreviewScheduler,
   createThemeSeed,
   formatBytes,
   getFormatConfig,
@@ -325,6 +328,9 @@ function createDefaultState() {
     outputBlob: null,
     previewUrl: '',
     outputMeta: null,
+    autoPreviewActive: false,
+    isGeneratingPreview: false,
+    savingImage: false,
     warning: '',
     error: '',
   }
@@ -360,6 +366,9 @@ export default {
     currentThemeLabel() {
       return this.currentThemeConfig.label
     },
+    autoPreviewSignature() {
+      return buildImageAutoPreviewSignature(this)
+    },
     qualityPercent: {
       get() {
         return Math.round(this.quality * 100)
@@ -394,6 +403,9 @@ export default {
     },
   },
   watch: {
+    autoPreviewSignature() {
+      this.scheduleAutoGenerate()
+    },
     format() {
       if (this.format === 'jpeg' && this.transparentBackground) {
         this.transparentBackground = false
@@ -410,7 +422,18 @@ export default {
       this.restoreHistory(newValue.inputSnapshot || newValue.snapshot || {})
     },
   },
+  created() {
+    this.autoPreviewScheduler = createAutoPreviewScheduler(() => {
+      if (!this.autoPreviewActive) return
+      this.generateImage({
+        record: false,
+        activateAutoPreview: false,
+        refreshRandomTheme: false,
+      })
+    })
+  },
   beforeUnmount() {
+    this.autoPreviewScheduler?.dispose()
     this.revokePreviewUrl()
   },
   methods: {
@@ -440,6 +463,7 @@ export default {
         this.backgroundImageName = raw.name
         this.backgroundMode = 'image'
         this.error = ''
+        this.scheduleAutoGenerate()
       } catch {
         this.backgroundImage = null
         this.backgroundImageName = ''
@@ -454,6 +478,7 @@ export default {
         this.watermarkImageName = raw.name
         this.watermarkEnabled = true
         this.error = ''
+        this.scheduleAutoGenerate()
       } catch {
         this.watermarkImage = null
         this.watermarkImageName = ''
@@ -474,6 +499,10 @@ export default {
       this.backgroundMode = 'theme'
       this.themeSeed = createThemeSeed()
       this.textColor = this.currentThemeConfig.textColor
+    },
+    scheduleAutoGenerate() {
+      if (!this.autoPreviewActive || this.isGeneratingPreview) return
+      this.autoPreviewScheduler?.schedule()
     },
     drawBackground(ctx, canvasSize, formatConfig) {
       if (!this.transparentBackground || !formatConfig.supportsTransparency) {
@@ -674,16 +703,24 @@ export default {
       ctx.drawImage(this.watermarkImage, rect.x, rect.y, rect.width, rect.height)
       ctx.restore()
     },
-    async generateImage() {
+    async generateImage(options = {}) {
+      const {
+        record = true,
+        activateAutoPreview = true,
+        refreshRandomTheme = true,
+      } = options
+
+      if (activateAutoPreview) this.autoPreviewActive = true
+      this.isGeneratingPreview = true
       try {
         const sizeResult = validateImageSize(this.width, this.height)
-        if (!sizeResult.ok) return this.failGeneration(sizeResult.error)
+        if (!sizeResult.ok) return this.failGeneration(sizeResult.error, { record })
 
         const formatConfig = getFormatConfig(this.format)
-        if (!formatConfig) return this.failGeneration('图片格式无效，请选择 PNG、JPEG 或 WebP')
+        if (!formatConfig) return this.failGeneration('图片格式无效，请选择 PNG、JPEG 或 WebP', { record })
 
         const qualityResult = normalizeQuality(this.format, this.quality)
-        if (!qualityResult.ok) return this.failGeneration(qualityResult.error)
+        if (!qualityResult.ok) return this.failGeneration(qualityResult.error, { record })
 
         const cropResult = validateCrop({
           enabled: this.cropEnabled,
@@ -692,9 +729,9 @@ export default {
           width: this.cropWidth,
           height: this.cropHeight,
         }, sizeResult.value)
-        if (!cropResult.ok) return this.failGeneration(cropResult.error)
+        if (!cropResult.ok) return this.failGeneration(cropResult.error, { record })
 
-        if (this.backgroundMode === 'theme' && this.themeType === 'random' && !this.themeLocked) {
+        if (refreshRandomTheme && this.backgroundMode === 'theme' && this.themeType === 'random' && !this.themeLocked) {
           this.themeSeed = createThemeSeed()
           this.textColor = this.currentThemeConfig.textColor
         }
@@ -703,7 +740,7 @@ export default {
         canvas.width = sizeResult.value.width
         canvas.height = sizeResult.value.height
         const ctx = canvas.getContext('2d')
-        if (!ctx) return this.failGeneration('当前环境无法创建图片画布')
+        if (!ctx) return this.failGeneration('当前环境无法创建图片画布', { record })
 
         this.drawBackground(ctx, sizeResult.value, formatConfig)
         this.drawText(ctx, sizeResult.value)
@@ -714,16 +751,19 @@ export default {
         this.setOutput(blob, getOutputDimensions(sizeResult.value, cropResult.value), formatConfig)
         this.warning = sizeResult.value.warning
         this.error = ''
-        this.recordHistory(true)
+        if (record) this.recordHistory(true)
       } catch (error) {
-        this.failGeneration(error?.message || '图片导出失败，请调整格式或尺寸后重试')
+        this.failGeneration(error?.message || '图片导出失败，请调整格式或尺寸后重试', { record })
+      } finally {
+        this.isGeneratingPreview = false
       }
     },
-    failGeneration(message) {
+    failGeneration(message, options = {}) {
+      const { record = true } = options
       this.error = message
       this.warning = ''
       this.clearOutput()
-      this.recordHistory(false)
+      if (record) this.recordHistory(false)
     },
     cropCanvas(sourceCanvas, crop) {
       const canvas = document.createElement('canvas')
@@ -754,24 +794,41 @@ export default {
         size: formatBytes(blob.size),
       }
     },
-    downloadImage() {
-      if (!this.outputBlob) return
+    async blobToBase64(blob) {
+      const buffer = await blob.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      let binary = ''
+      const chunkSize = 0x8000
+      for (let index = 0; index < bytes.length; index += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+      }
+      return btoa(binary)
+    },
+    async downloadImage() {
+      if (!this.outputBlob || this.savingImage) return
 
-      let url = ''
-      let link = null
+      this.savingImage = true
       try {
-        link = document.createElement('a')
-        url = URL.createObjectURL(this.outputBlob)
-        link.href = url
-        link.download = buildImageFileName(this.format)
-        document.body.appendChild(link)
-        link.click()
-        this.$emit('toast', { message: '图片下载已开始', type: 'success' })
-      } catch {
-        this.$emit('toast', { message: '下载失败，请重新生成后再试', type: 'error' })
+        const formatConfig = getFormatConfig(this.format) || getFormatConfig('png')
+        const response = await SaveGeneratedImage({
+          fileName: buildImageFileName(this.format),
+          extension: formatConfig.extension,
+          mime: this.outputBlob.type || formatConfig.mime,
+          dataBase64: await this.blobToBase64(this.outputBlob),
+        })
+        if (response?.cancelled) {
+          this.$emit('toast', { message: response.message || '已取消保存', type: 'info' })
+          return
+        }
+        if (!response?.success) {
+          this.$emit('toast', { message: response?.error || '保存失败，请重新生成后再试', type: 'error' })
+          return
+        }
+        this.$emit('toast', { message: response.message || '图片已保存', type: 'success' })
+      } catch (error) {
+        this.$emit('toast', { message: error?.message || '保存失败，请重新生成后再试', type: 'error' })
       } finally {
-        link?.remove()
-        if (url) URL.revokeObjectURL(url)
+        this.savingImage = false
       }
     },
     clearOutput() {
@@ -785,6 +842,7 @@ export default {
       this.previewUrl = ''
     },
     resetForm() {
+      this.autoPreviewScheduler?.dispose()
       this.revokePreviewUrl()
       Object.assign(this, createDefaultState())
     },
@@ -884,6 +942,9 @@ export default {
         watermarkImageName: '',
         outputBlob: null,
         outputMeta: null,
+        autoPreviewActive: false,
+        isGeneratingPreview: false,
+        savingImage: false,
         error: '',
         warning: '已恢复配置；背景图和水印图需要重新选择',
       })

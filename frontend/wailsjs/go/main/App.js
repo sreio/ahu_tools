@@ -66,6 +66,10 @@ export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }
 
+export function SaveGeneratedImage(arg1) {
+  return window['go']['main']['App']['SaveGeneratedImage'](arg1);
+}
+
 export function SaveH5DecryptConfig(arg1) {
   return window['go']['main']['App']['SaveH5DecryptConfig'](arg1);
 }

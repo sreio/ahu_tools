@@ -90,6 +90,44 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class GeneratedImageSaveRequest {
+	    fileName: string;
+	    extension: string;
+	    mime: string;
+	    dataBase64: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GeneratedImageSaveRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fileName = source["fileName"];
+	        this.extension = source["extension"];
+	        this.mime = source["mime"];
+	        this.dataBase64 = source["dataBase64"];
+	    }
+	}
+	export class GeneratedImageSaveResponse {
+	    success: boolean;
+	    cancelled: boolean;
+	    path?: string;
+	    message?: string;
+	    error?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GeneratedImageSaveResponse(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.cancelled = source["cancelled"];
+	        this.path = source["path"];
+	        this.message = source["message"];
+	        this.error = source["error"];
+	    }
+	}
 	export class H5DecryptConfig {
 	    id: number;
 	    environment: string;
@@ -273,4 +311,3 @@ export namespace main {
 	}
 
 }
-
