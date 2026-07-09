@@ -1158,3 +1158,155 @@ git commit -m "feat: add image generator tool"
 ```
 
 Expected: commit succeeds with only image generator files staged.
+
+## Task 9: Theme Background Utilities
+
+**Files:**
+- Modify: `frontend/src/utils/imageTool.js`
+- Modify: `frontend/src/utils/imageTool.test.js`
+
+- [ ] **Step 1: Add failing theme utility tests**
+
+Add tests for:
+
+```js
+import {
+  buildThemeConfig,
+  createThemeSeed,
+  getThemeDefinition,
+  imageThemes,
+  pickReadableTextColor,
+} from './imageTool'
+```
+
+Test expectations:
+
+```js
+expect(imageThemes.map((item) => item.key)).toEqual([
+  'random',
+  'aurora',
+  'glass',
+  'paper',
+  'tech-grid',
+  'fresh-geometry',
+  'neon',
+  'magazine',
+  'natural-light',
+])
+expect(getThemeDefinition('aurora').label).toBe('极光渐变')
+expect(getThemeDefinition('missing')).toBeNull()
+expect(createThemeSeed()).toBeGreaterThan(0)
+expect(buildThemeConfig('aurora', 12345)).toEqual(buildThemeConfig('aurora', 12345))
+expect(buildThemeConfig('random', 12345).key).not.toBe('random')
+expect(pickReadableTextColor(['#0f172a', '#1e293b'])).toBe('#f8fafc')
+expect(pickReadableTextColor(['#f8fafc', '#e0f2fe'])).toBe('#111827')
+```
+
+- [ ] **Step 2: Implement deterministic theme helpers**
+
+Add these exports to `frontend/src/utils/imageTool.js`:
+
+- `imageThemes`.
+- `createThemeSeed()`.
+- `getThemeDefinition(themeKey)`.
+- `buildThemeConfig(themeKey, seed)`.
+- `pickReadableTextColor(palette)`.
+
+Theme config must include:
+
+```js
+{
+  key,
+  label,
+  seed,
+  palette,
+  textColor,
+  gradientAngle,
+  shapes,
+}
+```
+
+`buildThemeConfig('random', seed)` must deterministically pick one non-random theme using the seed.
+
+## Task 10: Theme Background Rendering
+
+**Files:**
+- Modify: `frontend/src/tools/ImageGeneratorTool.vue`
+- Modify: `frontend/src/style.css`
+
+- [ ] **Step 1: Add theme state and UI controls**
+
+Add component state:
+
+```js
+backgroundMode: 'color',
+themeType: 'aurora',
+themeSeed: createThemeSeed(),
+themeLocked: false,
+themePreviewName: '极光渐变',
+themes: imageThemes,
+```
+
+Add background controls:
+
+- Background source radio group: `纯色` / `主题` / `背景图`.
+- Theme select shown for theme mode.
+- `随机一次` button.
+- `锁定样式` checkbox.
+- Background image upload still works and switches source to `背景图`.
+
+- [ ] **Step 2: Draw theme backgrounds before text and watermark**
+
+Add `drawThemeBackground(ctx, canvasSize)` in `ImageGeneratorTool.vue`.
+
+Rules:
+
+- If `backgroundImage` exists and `backgroundMode === 'image'`, draw the uploaded image.
+- Else if `backgroundMode === 'theme'`, draw the configured theme.
+- Else draw the background color or transparent background.
+- `随机一次` updates `themeSeed`.
+- When `themeLocked` is false and the user selects `随机`, generation can refresh the seed before drawing.
+- Theme drawing must use Canvas primitives only: gradients, translucent circles, polygons, fine lines, subtle texture dots, and grid lines.
+
+- [ ] **Step 3: Save and restore theme state in history**
+
+Add to history snapshot:
+
+```js
+backgroundMode,
+themeType,
+themeSeed,
+themeLocked,
+```
+
+Restore them with safe defaults.
+
+## Task 11: Theme Verification
+
+**Files:**
+- Verify: `frontend/src/utils/imageTool.js`
+- Verify: `frontend/src/tools/ImageGeneratorTool.vue`
+
+- [ ] **Step 1: Run automated checks**
+
+Run:
+
+```bash
+npm run test --prefix frontend
+npm run build --prefix frontend
+go test ./...
+```
+
+- [ ] **Step 2: Browser smoke checks**
+
+Verify:
+
+```text
+Theme source can be selected without uploading a background.
+Each named theme generates a visible non-blank background.
+Random once changes the preview.
+Locked style keeps the same theme seed across repeated preview generation.
+Uploading a background image overrides theme drawing when source is image.
+PNG/JPEG/WebP still generate successfully.
+Crop validation still works.
+```
