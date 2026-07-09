@@ -3,6 +3,7 @@ import DecryptTool from './DecryptTool.vue'
 import H5DecryptTool from './H5DecryptTool.vue'
 import HashTool from './HashTool.vue'
 import HtmlEntityTool from './HtmlEntityTool.vue'
+import ImageGeneratorTool from './ImageGeneratorTool.vue'
 import JsonTool from './JsonTool.vue'
 import JwtTool from './JwtTool.vue'
 import QueryTool from './QueryTool.vue'
@@ -99,6 +100,14 @@ export const tools = [
     description: 'UUID 与随机字符串',
     shortName: 'UUID',
     component: RandomTool,
+  },
+  {
+    key: 'image-generator',
+    name: '图片生成',
+    group: '图片工具',
+    description: '尺寸、文字、背景、水印',
+    shortName: '图',
+    component: ImageGeneratorTool,
   },
   {
     key: 'regex',

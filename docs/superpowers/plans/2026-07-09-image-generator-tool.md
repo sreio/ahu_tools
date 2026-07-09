@@ -107,7 +107,7 @@ describe('imageTool utilities', () => {
       fontSize: 32,
       horizontal: 'center',
       vertical: 'middle',
-    })).toEqual({ x: 400, y: 186.4, align: 'center', baseline: 'top', lineHeight: 38.4 })
+    })).toEqual({ x: 400, y: 186.6, align: 'center', baseline: 'top', lineHeight: 38.4 })
     expect(formatBytes(0)).toBe('0 B')
     expect(formatBytes(1024)).toBe('1 KB')
     expect(formatBytes(1536)).toBe('1.5 KB')
@@ -634,24 +634,24 @@ The template must render five input sections with Element Plus controls:
           <el-row :gutter="16">
             <el-col :xs="24" :md="12">
               <el-form-item label="X">
-                <el-input-number v-model="cropX" :min="0" :max="width - 1" class="full-width" :disabled="!cropEnabled" />
+                <el-input-number v-model="cropX" :min="0" :max="width - 1" class="full-width" />
               </el-form-item>
             </el-col>
             <el-col :xs="24" :md="12">
               <el-form-item label="Y">
-                <el-input-number v-model="cropY" :min="0" :max="height - 1" class="full-width" :disabled="!cropEnabled" />
+                <el-input-number v-model="cropY" :min="0" :max="height - 1" class="full-width" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="16">
             <el-col :xs="24" :md="12">
               <el-form-item label="裁剪宽度">
-                <el-input-number v-model="cropWidth" :min="1" :max="width" class="full-width" :disabled="!cropEnabled" />
+                <el-input-number v-model="cropWidth" :min="1" :max="width" class="full-width" />
               </el-form-item>
             </el-col>
             <el-col :xs="24" :md="12">
               <el-form-item label="裁剪高度">
-                <el-input-number v-model="cropHeight" :min="1" :max="height" class="full-width" :disabled="!cropEnabled" />
+                <el-input-number v-model="cropHeight" :min="1" :max="height" class="full-width" />
               </el-form-item>
             </el-col>
           </el-row>
